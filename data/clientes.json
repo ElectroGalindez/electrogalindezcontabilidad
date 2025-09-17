@@ -1,0 +1,4 @@
+[
+    {"id": "C001", "nombre": "Juan Perez", "telefono": "555-1234", "deuda_total": 0.0},
+    {"id": "C002", "nombre": "Maria Lopez", "telefono": "555-5678", "deuda_total": 50.0}
+]

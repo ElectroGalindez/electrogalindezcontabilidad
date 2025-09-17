@@ -1,17 +1,26 @@
 import streamlit as st
-import pandas as pd
-import json
-from pathlib import Path
+from backend.productos import list_products, add_product, edit_product, delete_product
+from backend.exceptions import ValidationError, NotFoundError
 
-DATA_PATH = Path("../data")  # ../ porque pages/ está dentro de app/
+st.title("📦 Inventario de Productos")
 
-def cargar_json(nombre):
-    with open(DATA_PATH / nombre, "r") as f:
-        return json.load(f)
+# Mostrar tabla de productos
+productos = list_products()
+st.subheader("Lista de Productos")
+st.table(productos)
 
-st.set_page_config(page_title="Inventario")
-st.title("📦 Inventario")
-
-productos = cargar_json("productos.json")
-st.table(pd.DataFrame(productos))
-
+# Formulario agregar producto
+st.subheader("Agregar Producto")
+with st.form("add_product"):
+    id = st.text_input("ID")
+    nombre = st.text_input("Nombre")
+    precio = st.number_input("Precio", min_value=0.0)
+    cantidad = st.number_input("Cantidad", min_value=0)
+    categoria = st.text_input("Categoría")
+    submitted = st.form_submit_button("Agregar")
+    if submitted:
+        try:
+            add_product({"id": id, "nombre": nombre, "precio": precio, "cantidad": cantidad, "categoria": categoria})
+            st.success("Producto agregado")
+        except ValidationError as e:
+            st.error(str(e))

@@ -1,0 +1,5 @@
+[
+    {"id": "P001", "nombre": "Televisor LED 42\"", "precio": 350.0, "cantidad": 10, "categoria": "Electrónica"},
+    {"id": "P002", "nombre": "Refrigerador 300L", "precio": 500.0, "cantidad": 5, "categoria": "Electrodomésticos"},
+    {"id": "P003", "nombre": "Microondas 20L", "precio": 120.0, "cantidad": 8, "categoria": "Electrodomésticos"}
+]
