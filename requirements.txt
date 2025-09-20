@@ -1,3 +1,5 @@
-streamlit
-pandas
-plotly
+streamlit>=1.20
+pandas>=1.5
+plotly>=5.0
+matplotlib>=3.5
+filelock>=3.12

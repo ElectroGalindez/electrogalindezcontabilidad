@@ -1,6 +1,10 @@
 import datetime
 from backend.ventas import list_sales
 from collections import Counter
+import json
+from pathlib import Path
+import pandas as pd
+
 
 def ventas_diarias(fecha=None):
     if not fecha:
@@ -23,5 +27,10 @@ def productos_mas_vendidos():
     return counter.most_common()
 
 def deudas_clientes():
-    from backend.clientes import list_clients
-    return [{"nombre": c["nombre"], "deuda_total": c["deuda_total"]} for c in list_clients() if c["deuda_total"] > 0]
+    with open("data/deudas.json", "r") as f:
+        deudas = json.load(f)
+    
+    if not deudas:
+        return pd.DataFrame(columns=["id", "cliente_id", "monto", "estado", "fecha"])
+    
+    return pd.DataFrame(deudas) 

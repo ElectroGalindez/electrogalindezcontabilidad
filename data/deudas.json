@@ -1,1 +1,16 @@
-[]
+[
+    {
+        "id": "D001",
+        "cliente_id": "C002",
+        "monto": 0.0,
+        "estado": "pagada",
+        "fecha": "2025-09-20"
+    },
+    {
+        "id": "D002",
+        "cliente_id": "C002",
+        "monto": 0.0,
+        "estado": "pagada",
+        "fecha": "2025-09-20"
+    }
+]
