@@ -1,14 +1,35 @@
-# frontend/📊 ElectroGalíndezContabilidad.py
 import streamlit as st
 import pandas as pd
-from backend import productos, clientes, ventas, deudas
 import plotly.express as px
+import sys
+import os
 
+# ---------------------------
+# Ajuste del path para backend
+# ---------------------------
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+if BASE_DIR not in sys.path:
+    sys.path.insert(0, BASE_DIR)
+
+# ---------------------------
+# Importar backend
+# ---------------------------
+from backend import productos, clientes, ventas, deudas
+
+# ---------------------------
+# Configuración de la app
+# ---------------------------
 st.set_page_config(
     page_title="ElectroGalíndez - Sistema Contable",
     page_icon="💰",
     layout="wide"
 )
+
+
+# Sidebar
+st.sidebar.title("ElectroGalíndez")
+st.sidebar.info("Selecciona una página:")
+
 
 st.title("📊 ElectroGalíndez - Sistema de Contabilidad")
 st.markdown("""
@@ -27,38 +48,77 @@ deudas_data = deudas.list_debts()
 # =========================
 # KPIs generales
 # =========================
+import streamlit as st
+import pandas as pd
+
 st.subheader("📌 Resumen General")
 
-col1, col2, col3, col4 = st.columns(4)
+# Columnas para el resumen
+col1, col2, col3, col4, col5 = st.columns(5)
 
-# Total productos y alertas stock bajo
+# Total productos y alerta stock bajo
 total_productos = len(productos_data)
 stock_bajo = sum(1 for p in productos_data if p["cantidad"] <= 5)
-
-col1.metric("Total Productos", total_productos, f"⚠️ {stock_bajo} con stock bajo" if stock_bajo else "")
+stock_alerta = f"⚠️ {stock_bajo} con stock bajo" if stock_bajo else "✅ Stock OK"
+col1.metric(
+    label="📦 Total Productos",
+    value=total_productos,
+    delta=stock_alerta
+)
 
 # Total clientes
 total_clientes = len(clientes_data)
-col2.metric("Clientes registrados", total_clientes)
+col2.metric(
+    label="👥 Clientes registrados",
+    value=total_clientes
+)
 
-# Total ventas del mes
+# Ventas del día
 if ventas_data:
     df_ventas = pd.DataFrame(ventas_data)
     df_ventas["fecha"] = pd.to_datetime(df_ventas["fecha"])
+    total_dia = df_ventas[df_ventas["fecha"].dt.date == pd.Timestamp.today().date()]["total"].sum()
+else:
+    total_dia = 0.0
+col3.metric(
+    label="💰 Ventas hoy",
+    value=f"${total_dia:,.2f}",
+    delta="✅ Hoy" if total_dia > 0 else "⚠️ Sin ventas"
+)
+
+# Ventas del mes
+if ventas_data:
     total_mes = df_ventas[df_ventas["fecha"].dt.month == pd.Timestamp.today().month]["total"].sum()
 else:
     total_mes = 0.0
-col3.metric("Ventas mes actual", f"${total_mes:,.2f}")
+col4.metric(
+    label="📈 Ventas mes actual",
+    value=f"${total_mes:,.2f}",
+    delta="✅ En curso" if total_mes > 0 else "⚠️ Sin ventas"
+)
 
-# Total deudas pendientes
+# Deudas pendientes
 df_deudas = pd.DataFrame([d for d in deudas_data if d["estado"] == "pendiente"]) if deudas_data else pd.DataFrame()
 total_deuda = df_deudas["monto"].sum() if not df_deudas.empty else 0.0
-col4.metric("Deudas pendientes", f"${total_deuda:,.2f}")
+col5.metric(
+    label="💳 Deudas pendientes",
+    value=f"${total_deuda:,.2f}",
+    delta="⚠️ Revisar" if total_deuda > 0 else "✅ Sin deudas"
+)
+
+# Opcional: mini gráficos de tendencia (ventas últimos 7 días)
+st.markdown("### 📊 Tendencia de ventas últimos 7 días")
+if ventas_data:
+    ultimos_7 = df_ventas[df_ventas["fecha"] >= (pd.Timestamp.today() - pd.Timedelta(days=7))]
+    df_diaria = ultimos_7.groupby(ultimos_7["fecha"].dt.date)["total"].sum().reset_index()
+    st.bar_chart(df_diaria.rename(columns={"fecha": "index"}).set_index("index")["total"])
+else:
+    st.info("No hay ventas registradas en los últimos 7 días")
 
 # =========================
-# KPIs destacados
+# Producto más vendid
 # =========================
-st.subheader("🏆 KPIs Destacados")
+st.subheader("🏆 Producto más vendido")
 col1, col2, col3, col4 = st.columns(4)
 
 # Productos más vendidos

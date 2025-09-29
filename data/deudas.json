@@ -12,5 +12,26 @@
         "monto": 0.0,
         "estado": "pagada",
         "fecha": "2025-09-20"
+    },
+    {
+        "id": "D003",
+        "cliente_id": "C002",
+        "monto": 2000.97,
+        "estado": "pendiente",
+        "fecha": "2025-09-20"
+    },
+    {
+        "id": "D004",
+        "cliente_id": "C001",
+        "monto": 27400.0,
+        "estado": "pendiente",
+        "fecha": "2025-09-20"
+    },
+    {
+        "id": "D005",
+        "cliente_id": "C001",
+        "monto": 92814.0,
+        "estado": "pendiente",
+        "fecha": "2025-09-27"
     }
 ]

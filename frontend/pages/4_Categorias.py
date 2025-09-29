@@ -1,3 +1,6 @@
+if "usuario" not in st.session_state or st.session_state.usuario is None:
+    st.warning("Debes iniciar sesión para acceder a esta página.")
+    st.stop()
 import streamlit as st
 from backend import categorias
 
@@ -20,8 +23,7 @@ with st.form("form_agregar"):
         try:
             categorias.agregar_categoria(nueva_categoria)
             st.success(f"Categoría '{nueva_categoria}' agregada ✅")
-            if st.session_state.reload:
-                st.session_state.reload = False
+            st.rerun()
         except ValueError as e:
             st.error(str(e))
 
@@ -63,11 +65,9 @@ else:
                 else:
                     categorias.editar_categoria(seleccionada, nuevo_nombre)
                     st.success(f"Categoría '{seleccionada}' renombrada a '{nuevo_nombre}' ✅")
-                    if st.session_state.reload:
-                        st.session_state.reload = False
+                    st.rerun()
 
             if eliminar:
                 categorias.eliminar_categoria(seleccionada)
                 st.warning(f"Categoría '{seleccionada}' eliminada ❌")
-                if st.session_state.reload:
-                    st.session_state.reload = False 
+                st.rerun()

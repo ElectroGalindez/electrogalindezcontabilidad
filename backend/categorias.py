@@ -1,20 +1,15 @@
-import os
-import json
 
-CATEGORIAS_FILE = os.path.join(os.path.dirname(__file__), "../data/categorias.json")
+from .utils import read_json, write_json_atomic
+
+FILENAME = "categorias.json"
+
 
 def cargar_categorias():
-    if not os.path.exists(CATEGORIAS_FILE):
-        return []
-    with open(CATEGORIAS_FILE, "r", encoding="utf-8") as f:
-        try:
-            return json.load(f)
-        except json.JSONDecodeError:
-            return []
+    return read_json(FILENAME)
+
 
 def guardar_categorias(categorias):
-    with open(CATEGORIAS_FILE, "w", encoding="utf-8") as f:
-        json.dump(categorias, f, indent=4, ensure_ascii=False)
+    write_json_atomic(FILENAME, categorias)
 
 def agregar_categoria(nombre):
     nombre = nombre.strip()

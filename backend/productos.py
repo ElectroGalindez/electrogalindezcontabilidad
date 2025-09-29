@@ -1,35 +1,28 @@
-import os
-import json
-import random
-import string
 
-PRODUCTOS_FILE = os.path.join(os.path.dirname(__file__), "../data/productos.json")
+from .utils import read_json, write_json_atomic, generate_id, validate_product
+
+FILENAME = "productos.json"
 
 # =============================
 # Función interna para generar ID
 # =============================
-def _generar_id():
-    return "P" + "".join(random.choices(string.ascii_uppercase + string.digits, k=5))
+
 
 # =============================
 # Cargar y guardar productos
 # =============================
+
 def cargar_productos():
-    if not os.path.exists(PRODUCTOS_FILE):
-        return []
-    with open(PRODUCTOS_FILE, "r", encoding="utf-8") as f:
-        try:
-            return json.load(f)
-        except json.JSONDecodeError:
-            return []
+    return read_json(FILENAME)
+
 
 def guardar_productos(productos):
-    with open(PRODUCTOS_FILE, "w", encoding="utf-8") as f:
-        json.dump(productos, f, indent=4, ensure_ascii=False)
+    write_json_atomic(FILENAME, productos)
 
 # =============================
 # Validaciones
 # =============================
+
 def _validar_producto(nombre, precio, cantidad, categoria, ignorar_id=None):
     if not nombre.strip():
         raise ValueError("El nombre del producto no puede estar vacío.")
@@ -47,19 +40,23 @@ def _validar_producto(nombre, precio, cantidad, categoria, ignorar_id=None):
 # =============================
 # Funciones CRUD
 # =============================
+
 def agregar_producto(nombre, precio, cantidad, categoria):
     _validar_producto(nombre, precio, cantidad, categoria)
     productos = cargar_productos()
     nuevo = {
-        "id": _generar_id(),
+        "id": generate_id("P", productos),
         "nombre": nombre.strip(),
         "precio": round(float(precio), 2),
         "cantidad": int(cantidad),
         "categoria": categoria.strip()
     }
+    if not validate_product(nuevo):
+        raise ValueError("Estructura de producto inválida")
     productos.append(nuevo)
     guardar_productos(productos)
     return nuevo
+
 
 def editar_producto(producto_id, nuevos_datos):
     _validar_producto(
@@ -78,8 +75,11 @@ def editar_producto(producto_id, nuevos_datos):
                 "cantidad": int(nuevos_datos["cantidad"]),
                 "categoria": nuevos_datos["categoria"]
             })
+            if not validate_product(p):
+                raise ValueError("Estructura de producto inválida tras edición")
             break
     guardar_productos(productos)
+
 
 def eliminar_producto(producto_id):
     productos = cargar_productos()
@@ -89,26 +89,17 @@ def eliminar_producto(producto_id):
 # =============================
 # Funciones de consulta
 # =============================
+
 def get_product(producto_id):
-    """
-    Devuelve el producto completo según su ID.
-    Retorna None si no existe.
-    """
     productos = cargar_productos()
     return next((p for p in productos if p["id"] == producto_id), None)
 
+
 def list_products():
-    """
-    Devuelve la lista completa de productos.
-    """
     return cargar_productos()
 
+
 def adjust_stock(producto_id, cantidad_cambio):
-    """
-    Ajusta el stock de un producto según la cantidad_cambio.
-    Puede ser positivo (sumar) o negativo (restar).
-    Lanza ValueError si el stock final sería negativo.
-    """
     productos = cargar_productos()
     producto = next((p for p in productos if p["id"] == producto_id), None)
     if not producto:
@@ -117,5 +108,7 @@ def adjust_stock(producto_id, cantidad_cambio):
     if nuevo_stock < 0:
         raise ValueError(f"No hay suficiente stock para '{producto['nombre']}'")
     producto["cantidad"] = nuevo_stock
+    if not validate_product(producto):
+        raise ValueError("Estructura de producto inválida tras ajuste de stock")
     guardar_productos(productos)
     return producto
