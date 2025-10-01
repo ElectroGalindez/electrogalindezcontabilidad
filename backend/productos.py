@@ -41,7 +41,7 @@ def _validar_producto(nombre, precio, cantidad, categoria, ignorar_id=None):
 # Funciones CRUD
 # =============================
 
-def agregar_producto(nombre, precio, cantidad, categoria):
+def agregar_producto(nombre, precio, cantidad, categoria, usuario=None):
     _validar_producto(nombre, precio, cantidad, categoria)
     productos = cargar_productos()
     nuevo = {
@@ -55,10 +55,22 @@ def agregar_producto(nombre, precio, cantidad, categoria):
         raise ValueError("Estructura de producto inválida")
     productos.append(nuevo)
     guardar_productos(productos)
+    # Registrar log de creación de producto
+    try:
+        from .logs import registrar_log
+        registrar_log(usuario or "sistema", "crear_producto", {
+            "producto_id": nuevo["id"],
+            "nombre": nombre,
+            "precio": precio,
+            "cantidad": cantidad,
+            "categoria": categoria
+        })
+    except Exception:
+        pass
     return nuevo
 
 
-def editar_producto(producto_id, nuevos_datos):
+def editar_producto(producto_id, nuevos_datos, usuario=None):
     _validar_producto(
         nuevos_datos["nombre"],
         nuevos_datos["precio"],
@@ -77,14 +89,33 @@ def editar_producto(producto_id, nuevos_datos):
             })
             if not validate_product(p):
                 raise ValueError("Estructura de producto inválida tras edición")
+            # Registrar log de edición de producto
+            try:
+                from .logs import registrar_log
+                registrar_log(usuario or "sistema", "editar_producto", {
+                    "producto_id": producto_id,
+                    "cambios": nuevos_datos
+                })
+            except Exception:
+                pass
             break
     guardar_productos(productos)
 
 
-def eliminar_producto(producto_id):
+def eliminar_producto(producto_id, usuario=None):
     productos = cargar_productos()
+    producto_eliminado = next((p for p in productos if p["id"] == producto_id), None)
     productos = [p for p in productos if p["id"] != producto_id]
     guardar_productos(productos)
+    # Registrar log de eliminación de producto
+    try:
+        from .logs import registrar_log
+        registrar_log(usuario or "sistema", "eliminar_producto", {
+            "producto_id": producto_id,
+            "producto": producto_eliminado
+        })
+    except Exception:
+        pass
 
 # =============================
 # Funciones de consulta

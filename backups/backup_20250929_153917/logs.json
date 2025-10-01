@@ -1,0 +1,637 @@
+[
+    {
+        "usuario": "admin",
+        "accion": "pago_deuda",
+        "detalles": {
+            "deuda_id": "D004",
+            "cliente_id": "C001",
+            "monto_pago": 20000.0,
+            "estado_final": "pendiente"
+        },
+        "fecha": "2025-09-29T14:52:46.933831"
+    },
+    {
+        "usuario": "admin",
+        "accion": "registrar_venta",
+        "detalles": {
+            "venta_id": "V009",
+            "cliente_id": "C001",
+            "total": 1800.0,
+            "pagado": 1800.0,
+            "tipo_pago": "Efectivo",
+            "productos": [
+                {
+                    "id_producto": "P006",
+                    "nombre": "Aspiradora 1200W",
+                    "cantidad": 10,
+                    "precio_unitario": 180.0,
+                    "subtotal": 1800.0
+                }
+            ]
+        },
+        "fecha": "2025-09-29T15:00:18.760329"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "productos.json",
+            "registros": 4
+        },
+        "fecha": "2025-09-29T15:33:36.570159"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "clientes.json",
+            "registros": 3
+        },
+        "fecha": "2025-09-29T15:33:36.571489"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "ventas.json",
+            "registros": 9
+        },
+        "fecha": "2025-09-29T15:33:36.572689"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "deudas.json",
+            "registros": 5
+        },
+        "fecha": "2025-09-29T15:33:36.574595"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "productos.json",
+            "registros": 4
+        },
+        "fecha": "2025-09-29T15:33:46.356209"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "categorias.json",
+            "registros": 7
+        },
+        "fecha": "2025-09-29T15:33:46.356941"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "productos.json",
+            "registros": 4
+        },
+        "fecha": "2025-09-29T15:33:47.834711"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "categorias.json",
+            "registros": 7
+        },
+        "fecha": "2025-09-29T15:33:47.836383"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "clientes.json",
+            "registros": 3
+        },
+        "fecha": "2025-09-29T15:33:48.665298"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "productos.json",
+            "registros": 4
+        },
+        "fecha": "2025-09-29T15:33:48.667843"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "ventas.json",
+            "registros": 9
+        },
+        "fecha": "2025-09-29T15:33:49.359198"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "productos.json",
+            "registros": 4
+        },
+        "fecha": "2025-09-29T15:33:49.360313"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "deudas.json",
+            "registros": 5
+        },
+        "fecha": "2025-09-29T15:33:49.361415"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "clientes.json",
+            "registros": 3
+        },
+        "fecha": "2025-09-29T15:33:49.362255"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "clientes.json",
+            "registros": 3
+        },
+        "fecha": "2025-09-29T15:33:58.653300"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "productos.json",
+            "registros": 4
+        },
+        "fecha": "2025-09-29T15:33:58.656664"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "categorias.json",
+            "registros": 7
+        },
+        "fecha": "2025-09-29T15:34:04.116855"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "categorias.json",
+            "registros": 7
+        },
+        "fecha": "2025-09-29T15:34:04.120086"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "clientes.json",
+            "registros": 3
+        },
+        "fecha": "2025-09-29T15:34:05.689173"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "productos.json",
+            "registros": 4
+        },
+        "fecha": "2025-09-29T15:34:05.693435"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "categorias.json",
+            "registros": 7
+        },
+        "fecha": "2025-09-29T15:34:10.151435"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "categorias.json",
+            "registros": 7
+        },
+        "fecha": "2025-09-29T15:34:10.155779"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "clientes.json",
+            "registros": 3
+        },
+        "fecha": "2025-09-29T15:34:11.979703"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "clientes.json",
+            "registros": 3
+        },
+        "fecha": "2025-09-29T15:34:11.982956"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "deudas.json",
+            "registros": 5
+        },
+        "fecha": "2025-09-29T15:34:11.986840"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "clientes.json",
+            "registros": 3
+        },
+        "fecha": "2025-09-29T15:34:22.021059"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "clientes.json",
+            "registros": 3
+        },
+        "fecha": "2025-09-29T15:34:22.025158"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "deudas.json",
+            "registros": 5
+        },
+        "fecha": "2025-09-29T15:34:22.028164"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "clientes.json",
+            "registros": 3
+        },
+        "fecha": "2025-09-29T15:38:51.145047"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "clientes.json",
+            "registros": 3
+        },
+        "fecha": "2025-09-29T15:38:51.147859"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "deudas.json",
+            "registros": 5
+        },
+        "fecha": "2025-09-29T15:38:51.149847"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "categorias.json",
+            "registros": 7
+        },
+        "fecha": "2025-09-29T15:38:51.671207"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "categorias.json",
+            "registros": 7
+        },
+        "fecha": "2025-09-29T15:38:51.675025"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "clientes.json",
+            "registros": 3
+        },
+        "fecha": "2025-09-29T15:38:52.293727"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "productos.json",
+            "registros": 4
+        },
+        "fecha": "2025-09-29T15:38:52.299219"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "ventas.json",
+            "registros": 9
+        },
+        "fecha": "2025-09-29T15:38:52.765496"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "productos.json",
+            "registros": 4
+        },
+        "fecha": "2025-09-29T15:38:52.767446"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "deudas.json",
+            "registros": 5
+        },
+        "fecha": "2025-09-29T15:38:52.768943"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "clientes.json",
+            "registros": 3
+        },
+        "fecha": "2025-09-29T15:38:52.770045"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "productos.json",
+            "registros": 4
+        },
+        "fecha": "2025-09-29T15:38:53.254764"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "categorias.json",
+            "registros": 7
+        },
+        "fecha": "2025-09-29T15:38:53.256254"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "productos.json",
+            "registros": 4
+        },
+        "fecha": "2025-09-29T15:38:54.253837"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "clientes.json",
+            "registros": 3
+        },
+        "fecha": "2025-09-29T15:38:54.255521"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "ventas.json",
+            "registros": 9
+        },
+        "fecha": "2025-09-29T15:38:54.258635"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "deudas.json",
+            "registros": 5
+        },
+        "fecha": "2025-09-29T15:38:54.269678"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "clientes.json",
+            "registros": 3
+        },
+        "fecha": "2025-09-29T15:39:09.794194"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "clientes.json",
+            "registros": 3
+        },
+        "fecha": "2025-09-29T15:39:09.798567"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "deudas.json",
+            "registros": 5
+        },
+        "fecha": "2025-09-29T15:39:09.800684"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "clientes.json",
+            "registros": 3
+        },
+        "fecha": "2025-09-29T15:39:11.058251"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "clientes.json",
+            "registros": 3
+        },
+        "fecha": "2025-09-29T15:39:11.061156"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "deudas.json",
+            "registros": 5
+        },
+        "fecha": "2025-09-29T15:39:11.063875"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "clientes.json",
+            "registros": 3
+        },
+        "fecha": "2025-09-29T15:39:11.392235"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "clientes.json",
+            "registros": 3
+        },
+        "fecha": "2025-09-29T15:39:11.395805"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "deudas.json",
+            "registros": 5
+        },
+        "fecha": "2025-09-29T15:39:11.398310"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "clientes.json",
+            "registros": 3
+        },
+        "fecha": "2025-09-29T15:39:11.861262"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "clientes.json",
+            "registros": 3
+        },
+        "fecha": "2025-09-29T15:39:11.866502"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "deudas.json",
+            "registros": 5
+        },
+        "fecha": "2025-09-29T15:39:11.869072"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "categorias.json",
+            "registros": 7
+        },
+        "fecha": "2025-09-29T15:39:12.328121"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "categorias.json",
+            "registros": 7
+        },
+        "fecha": "2025-09-29T15:39:12.333503"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "clientes.json",
+            "registros": 3
+        },
+        "fecha": "2025-09-29T15:39:12.777034"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "productos.json",
+            "registros": 4
+        },
+        "fecha": "2025-09-29T15:39:12.781374"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "ventas.json",
+            "registros": 9
+        },
+        "fecha": "2025-09-29T15:39:13.257957"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "productos.json",
+            "registros": 4
+        },
+        "fecha": "2025-09-29T15:39:13.260243"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "deudas.json",
+            "registros": 5
+        },
+        "fecha": "2025-09-29T15:39:13.262604"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "clientes.json",
+            "registros": 3
+        },
+        "fecha": "2025-09-29T15:39:13.265014"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "productos.json",
+            "registros": 4
+        },
+        "fecha": "2025-09-29T15:39:13.774930"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "categorias.json",
+            "registros": 7
+        },
+        "fecha": "2025-09-29T15:39:13.777151"
+    }
+]

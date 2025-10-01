@@ -24,6 +24,6 @@ else:
         if user:
             st.session_state.usuario = user
             st.success(f"Bienvenido, {user['username']} ({user['rol']})")
-            st.experimental_rerun()
+            st.rerun()
         else:
             st.error("Usuario o contraseña incorrectos")

@@ -1,12 +1,14 @@
-if "usuario" not in st.session_state or st.session_state.usuario is None:
-    st.warning("Debes iniciar sesión para acceder a esta página.")
-    st.stop()
+
 import streamlit as st
 import pandas as pd
 from backend import productos, clientes, ventas
 
 st.title("🛒 Registrar Venta")
 
+if "usuario" not in st.session_state or st.session_state.usuario is None:
+    st.warning("Debes iniciar sesión para acceder a esta página.")
+    st.stop()
+    
 # ---------------------------
 # CLIENTE
 # ---------------------------

@@ -1,14 +1,14 @@
-if "usuario" not in st.session_state or st.session_state.usuario is None:
-    st.warning("Debes iniciar sesión para acceder a esta página.")
-    st.stop()
-
+# frontend/pages/5_Deudas.py
 import streamlit as st
 import pandas as pd
 from backend.clientes import list_clients, get_client
 from backend.deudas import debts_by_client, pay_debt
 
-st.title("💳 Gestión de Deudas y Pagos"
-         )
+st.title("💳 Gestión de Deudas y Pagos")
+
+if "usuario" not in st.session_state or st.session_state.usuario is None:
+    st.warning("Debes iniciar sesión para acceder a esta página.")
+    st.stop()
 
 clientes = list_clients()
 clientes_con_deuda = [c for c in clientes if c.get("deuda_total", 0) > 0]
@@ -59,7 +59,6 @@ else:
             st.info("No hay deudas pendientes para este cliente.")
 
 # Tabla con todos los clientes con deudas
-st.markdown("<hr>")
 st.markdown("<b>Todos los clientes con deudas:</b>", unsafe_allow_html=True)
 if clientes_con_deuda:
     import json

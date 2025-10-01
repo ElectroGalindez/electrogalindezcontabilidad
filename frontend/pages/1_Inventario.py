@@ -1,6 +1,3 @@
-if "usuario" not in st.session_state or st.session_state.usuario is None:
-    st.warning("Debes iniciar sesión para acceder a esta página.")
-    st.stop()
 
 import streamlit as st
 import pandas as pd
@@ -19,6 +16,10 @@ st.markdown("""
 """, unsafe_allow_html=True)
 st.markdown('<div class="titulo-principal">📦 Inventario de Productos</div>', unsafe_allow_html=True)
 
+if "usuario" not in st.session_state or st.session_state.usuario is None:
+    st.warning("Debes iniciar sesión para acceder a esta página.")
+    st.stop()
+    
 # =============================
 # Variables de sesión
 # =============================

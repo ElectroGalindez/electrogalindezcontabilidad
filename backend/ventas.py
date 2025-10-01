@@ -1,3 +1,22 @@
+from typing import Optional
+from typing import List, Dict, Any
+
+# Eliminar venta
+def delete_sale(sale_id: str, usuario: Optional[str] = None) -> bool:
+    ventas = list_sales()
+    venta_eliminada = next((v for v in ventas if v["id"] == sale_id), None)
+    ventas = [v for v in ventas if v["id"] != sale_id]
+    write_json_atomic(FILENAME, ventas)
+    # Registrar log de eliminación de venta
+    try:
+        from .logs import registrar_log
+        registrar_log(usuario or "sistema", "eliminar_venta", {
+            "venta_id": sale_id,
+            "venta": venta_eliminada
+        })
+    except Exception:
+        pass
+    return True
 # backend/ventas.py
 """
 Módulo para registrar ventas y su efecto en inventario y deudas.
@@ -31,7 +50,7 @@ def _calculate_total(items: List[Dict[str, Any]]) -> float:
         total += float(it["cantidad"]) * float(it["precio_unitario"])
     return round(total, 2)
 
-def register_sale(cliente_id: str, items: List[Dict[str, Any]], pagado: float, tipo_pago: Optional[str] = None) -> Dict[str, Any]:
+def register_sale(cliente_id: str, items: List[Dict[str, Any]], pagado: float, tipo_pago: Optional[str] = None, usuario: Optional[str] = None) -> Dict[str, Any]:
     """
     Registra una venta:
     - Verifica disponibilidad de stock
@@ -79,6 +98,19 @@ def register_sale(cliente_id: str, items: List[Dict[str, Any]], pagado: float, t
     # Si no pagó todo, registrar deuda
     if pagado < total:
         diferencia = round(total - pagado, 2)
-        add_debt(cliente_id, diferencia)
+        add_debt(cliente_id, diferencia, usuario=usuario)
 
+    # Registrar log de venta
+    try:
+        from .logs import registrar_log
+        registrar_log(usuario or "sistema", "registrar_venta", {
+            "venta_id": new_sale["id"],
+            "cliente_id": cliente_id,
+            "total": total,
+            "pagado": pagado,
+            "tipo_pago": tipo_pago,
+            "productos": items
+        })
+    except Exception:
+        pass
     return new_sale

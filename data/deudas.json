@@ -16,14 +16,14 @@
     {
         "id": "D003",
         "cliente_id": "C002",
-        "monto": 2000.97,
+        "monto": 0.97,
         "estado": "pendiente",
         "fecha": "2025-09-20"
     },
     {
         "id": "D004",
         "cliente_id": "C001",
-        "monto": 27400.0,
+        "monto": 7400.0,
         "estado": "pendiente",
         "fecha": "2025-09-20"
     },

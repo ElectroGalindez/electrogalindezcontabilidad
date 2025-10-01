@@ -7,9 +7,9 @@ import os
 # ---------------------------
 # Ajuste del path para backend
 # ---------------------------
-BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-if BASE_DIR not in sys.path:
-    sys.path.insert(0, BASE_DIR)
+ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+if ROOT_DIR not in sys.path:
+    sys.path.insert(0, ROOT_DIR)
 
 # ---------------------------
 # Importar backend
@@ -25,17 +25,17 @@ st.set_page_config(
     layout="wide"
 )
 
-
-# Sidebar
-st.sidebar.title("ElectroGalíndez")
-st.sidebar.info("Selecciona una página:")
-
-
 st.title("📊 ElectroGalíndez - Sistema de Contabilidad")
 st.markdown("""
 Bienvenido al sistema contable de **ElectroGalíndez**.  
 Aquí tienes un resumen rápido de la situación actual de tu negocio.
 """)
+
+if "usuario" not in st.session_state or st.session_state.usuario is None:
+    st.warning("Debes iniciar sesión para acceder a esta página.")
+    st.stop()
+
+
 
 # =========================
 # Cargar datos
@@ -194,12 +194,3 @@ if ventas_data:
         fig2 = px.pie(df_cat, names="categoria", values="cantidad", title="Ventas por Categoría")
         st.plotly_chart(fig2, use_container_width=True)
 
-# =========================
-# Accesos rápidos
-# =========================
-st.subheader("🔗 Accesos Rápidos")
-col1, col2, col3, col4 = st.columns(4)
-col1.button("📦 Inventario")
-col2.button("🛒 Ventas")
-col3.button("💳 Pagos")
-col4.button("📈 Reportes")

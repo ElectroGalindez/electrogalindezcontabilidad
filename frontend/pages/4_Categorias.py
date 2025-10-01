@@ -1,12 +1,14 @@
-if "usuario" not in st.session_state or st.session_state.usuario is None:
-    st.warning("Debes iniciar sesión para acceder a esta página.")
-    st.stop()
+
 import streamlit as st
 from backend import categorias
 
 st.set_page_config(page_title="Categorías", layout="wide")
 st.title("📂 Gestión de Categorías")
 
+if "usuario" not in st.session_state or st.session_state.usuario is None:
+    st.warning("Debes iniciar sesión para acceder a esta página.")
+    st.stop()
+    
 # =============================
 # 1. Cargar categorías
 # =============================

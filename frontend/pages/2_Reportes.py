@@ -1,6 +1,3 @@
-if "usuario" not in st.session_state or st.session_state.usuario is None:
-    st.warning("Debes iniciar sesión para acceder a esta página.")
-    st.stop()
 
 # frontend/pages/4_Reportes.py
 import streamlit as st
@@ -9,6 +6,11 @@ from backend import ventas, productos, deudas, clientes
 import plotly.express as px
 
 st.title("📈 Reportes y Análisis")
+
+if "usuario" not in st.session_state or st.session_state.usuario is None:
+    st.warning("Debes iniciar sesión para acceder a esta página.")
+    st.stop()
+
 
 # ===========================
 # DATOS BASE

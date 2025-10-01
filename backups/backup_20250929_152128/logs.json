@@ -1,0 +1,34 @@
+[
+    {
+        "usuario": "admin",
+        "accion": "pago_deuda",
+        "detalles": {
+            "deuda_id": "D004",
+            "cliente_id": "C001",
+            "monto_pago": 20000.0,
+            "estado_final": "pendiente"
+        },
+        "fecha": "2025-09-29T14:52:46.933831"
+    },
+    {
+        "usuario": "admin",
+        "accion": "registrar_venta",
+        "detalles": {
+            "venta_id": "V009",
+            "cliente_id": "C001",
+            "total": 1800.0,
+            "pagado": 1800.0,
+            "tipo_pago": "Efectivo",
+            "productos": [
+                {
+                    "id_producto": "P006",
+                    "nombre": "Aspiradora 1200W",
+                    "cantidad": 10,
+                    "precio_unitario": 180.0,
+                    "subtotal": 1800.0
+                }
+            ]
+        },
+        "fecha": "2025-09-29T15:00:18.760329"
+    }
+]

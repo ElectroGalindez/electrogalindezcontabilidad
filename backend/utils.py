@@ -4,12 +4,15 @@ Utilidades para manejo de archivos JSON como "base de datos".
 Incluye lectura/escritura atómica, bloqueo de archivo (FileLock), generación de IDs y validaciones básicas.
 """
 
+
 from pathlib import Path
 import json
 from filelock import FileLock, Timeout
 import tempfile
+from typing import Optional
 from typing import Any, List, Dict
 import datetime
+from .logs import registrar_log
 
 # Ruta base de datos (data/)
 BASE_DIR = Path(__file__).resolve().parents[1]
@@ -21,23 +24,34 @@ LOCK_TIMEOUT = 5  # segundos para esperar lock
 def _file_lock_path(path: Path) -> Path:
     return Path(str(path) + ".lock")
 
-def read_json(filename: str) -> List[Dict[str, Any]]:
+def read_json(filename: str, actor=None) -> List[Dict[str, Any]]:
     """
     Lee un archivo JSON y devuelve la lista de registros.
     Si no existe, devuelve lista vacía.
     """
     path = DATA_DIR / filename
     if not path.exists():
+        registrar_log(
+            usuario=actor or "sistema",
+            accion="read_json",
+            detalles={"archivo": filename, "existe": False}
+        )
         return []
     lock = FileLock(str(_file_lock_path(path)))
     try:
         with lock.acquire(timeout=LOCK_TIMEOUT):
             with path.open("r", encoding="utf-8") as f:
-                return json.load(f)
+                data = json.load(f)
+            registrar_log(
+                usuario=actor or "sistema",
+                accion="read_json",
+                detalles={"archivo": filename, "registros": len(data)}
+            )
+            return data
     except Timeout:
         raise RuntimeError(f"No se pudo adquirir bloqueo para leer {filename}")
 
-def write_json_atomic(filename: str, data: List[Dict[str, Any]]) -> None:
+def write_json_atomic(filename: str, data: List[Dict[str, Any]], actor=None) -> None:
     """
     Escribe de forma atómica en el archivo JSON (escribe en temp + reemplaza).
     Usa lock para evitar concurrencia.
@@ -51,6 +65,11 @@ def write_json_atomic(filename: str, data: List[Dict[str, Any]]) -> None:
                 json.dump(data, tmp, indent=4, ensure_ascii=False)
                 tmp_path = Path(tmp.name)
             tmp_path.replace(path)
+        registrar_log(
+            usuario=actor or "sistema",
+            accion="write_json_atomic",
+            detalles={"archivo": filename, "registros": len(data)}
+        )
     except Timeout:
         raise RuntimeError(f"No se pudo adquirir bloqueo para escribir {filename}")
 
