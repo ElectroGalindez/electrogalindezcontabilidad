@@ -61,25 +61,23 @@ def guardar_logs(logs, mes=None):
 # ---------------------------
 # Registrar log principal
 # ---------------------------
-def registrar_log(usuario, accion, detalles=None, nivel="CRITICAL"):
-    """
-    Registra un log si la acción es importante o nivel CRITICAL.
-    niveles: INFO, WARNING, CRITICAL
-    """
-    if nivel != "CRITICAL" and accion not in ACCIONES_IMPORTANTES:
-        return None  # Ignorar logs triviales
+def registrar_log(usuario, accion, detalles=None):
+    # Filtrar acciones no importantes
+    acciones_ignorar = ["read-json", "leer_json", "ping", "heartbeat"]  # puedes agregar más
+    if accion.lower() in acciones_ignorar:
+        return None  # no guardar este log
 
     logs = cargar_logs()
     nuevo = {
         "usuario": usuario,
         "accion": accion,
         "detalles": detalles or {},
-        "fecha": datetime.now().isoformat(),
-        "nivel": nivel  # <--- agregado
+        "fecha": datetime.now().isoformat()
     }
     logs.append(nuevo)
     guardar_logs(logs)
     return nuevo
+
 
 # ---------------------------
 # Registrar errores
