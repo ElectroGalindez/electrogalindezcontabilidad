@@ -63,7 +63,7 @@ def guardar_logs(logs, mes=None):
 # ---------------------------
 def registrar_log(usuario, accion, detalles=None):
     # Filtrar acciones no importantes
-    acciones_ignorar = ["read-json", "leer_json", "ping", "heartbeat"]  # puedes agregar más
+    acciones_ignorar = ["read-json", "leer_json", "ping", "heartbeat", "write_json_atomic"]  # puedes agregar más
     if accion.lower() in acciones_ignorar:
         return None  # no guardar este log
 
