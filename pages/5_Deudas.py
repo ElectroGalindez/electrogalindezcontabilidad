@@ -63,7 +63,7 @@ st.markdown("<b>Todos los clientes con deudas:</b>", unsafe_allow_html=True)
 if clientes_con_deuda:
     import json
     # Cargar deudas para buscar la fecha de la primera deuda pendiente
-    with open("../data/deudas.json", "r") as f:
+    with open("./data/deudas.json", "r") as f:
         deudas_data = json.load(f)
     tabla_clientes = []
     for c in clientes_con_deuda:

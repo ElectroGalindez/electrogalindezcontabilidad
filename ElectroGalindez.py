@@ -1,15 +1,16 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+from pathlib import Path
 import sys
 import os
 
 # ---------------------------
 # Ajuste del path para backend
 # ---------------------------
-ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-if ROOT_DIR not in sys.path:
-    sys.path.insert(0, ROOT_DIR)
+BASE_DIR = Path(__file__).resolve().parent  # ElectroGalindez.py está en la raíz
+DATA_DIR = BASE_DIR / "data"
+BACKUPS_DIR = BASE_DIR / "backups"
 # ---------------------------
 # Importar backend
 # ---------------------------

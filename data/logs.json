@@ -5052,5 +5052,1535 @@
         },
         "fecha": "2025-10-01T08:33:43.740988",
         "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "productos.json",
+            "registros": 4
+        },
+        "fecha": "2025-10-01T09:22:57.273538",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "categorias.json",
+            "registros": 7
+        },
+        "fecha": "2025-10-01T09:22:57.285184",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "productos.json",
+            "registros": 4
+        },
+        "fecha": "2025-10-01T09:22:57.547101",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "productos.json",
+            "registros": 4
+        },
+        "fecha": "2025-10-01T09:22:59.040538",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "categorias.json",
+            "registros": 7
+        },
+        "fecha": "2025-10-01T09:22:59.051085",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "productos.json",
+            "registros": 4
+        },
+        "fecha": "2025-10-01T09:22:59.073348",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "clientes.json",
+            "registros": 3
+        },
+        "fecha": "2025-10-01T09:23:01.923722",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "deudas.json",
+            "registros": 5
+        },
+        "fecha": "2025-10-01T09:23:01.936304",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "deudas.json",
+            "registros": 5
+        },
+        "fecha": "2025-10-01T09:23:01.952681",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "deudas.json",
+            "registros": 5
+        },
+        "fecha": "2025-10-01T09:23:01.960086",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "deudas.json",
+            "registros": 5
+        },
+        "fecha": "2025-10-01T09:23:01.965858",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "ventas.json",
+            "registros": 9
+        },
+        "fecha": "2025-10-01T09:23:02.407264",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "productos.json",
+            "registros": 4
+        },
+        "fecha": "2025-10-01T09:23:02.417512",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "deudas.json",
+            "registros": 5
+        },
+        "fecha": "2025-10-01T09:23:02.426383",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "clientes.json",
+            "registros": 3
+        },
+        "fecha": "2025-10-01T09:23:02.437142",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "clientes.json",
+            "registros": 3
+        },
+        "fecha": "2025-10-01T09:23:03.035917",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "deudas.json",
+            "registros": 5
+        },
+        "fecha": "2025-10-01T09:23:03.043927",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "deudas.json",
+            "registros": 5
+        },
+        "fecha": "2025-10-01T09:23:03.056430",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "deudas.json",
+            "registros": 5
+        },
+        "fecha": "2025-10-01T09:23:03.061111",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "deudas.json",
+            "registros": 5
+        },
+        "fecha": "2025-10-01T09:23:03.066789",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "clientes.json",
+            "registros": 3
+        },
+        "fecha": "2025-10-01T09:23:06.796005",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "deudas.json",
+            "registros": 5
+        },
+        "fecha": "2025-10-01T09:23:06.804910",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "deudas.json",
+            "registros": 5
+        },
+        "fecha": "2025-10-01T09:23:06.814717",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "deudas.json",
+            "registros": 5
+        },
+        "fecha": "2025-10-01T09:23:06.820305",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "deudas.json",
+            "registros": 5
+        },
+        "fecha": "2025-10-01T09:23:06.825713",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "clientes.json",
+            "registros": 3
+        },
+        "fecha": "2025-10-01T09:23:08.295450",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "deudas.json",
+            "registros": 5
+        },
+        "fecha": "2025-10-01T09:23:08.304921",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "deudas.json",
+            "registros": 5
+        },
+        "fecha": "2025-10-01T09:23:08.312619",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "deudas.json",
+            "registros": 5
+        },
+        "fecha": "2025-10-01T09:23:08.318621",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "deudas.json",
+            "registros": 5
+        },
+        "fecha": "2025-10-01T09:23:08.324120",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "clientes.json",
+            "registros": 3
+        },
+        "fecha": "2025-10-01T09:23:11.911919",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "deudas.json",
+            "registros": 5
+        },
+        "fecha": "2025-10-01T09:23:11.921972",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "deudas.json",
+            "registros": 5
+        },
+        "fecha": "2025-10-01T09:23:11.930928",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "deudas.json",
+            "registros": 5
+        },
+        "fecha": "2025-10-01T09:23:11.934660",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "deudas.json",
+            "registros": 5
+        },
+        "fecha": "2025-10-01T09:23:11.939776",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "clientes.json",
+            "registros": 3
+        },
+        "fecha": "2025-10-01T09:23:14.758265",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "clientes.json",
+            "registros": 3
+        },
+        "fecha": "2025-10-01T09:23:14.771293",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "deudas.json",
+            "registros": 5
+        },
+        "fecha": "2025-10-01T09:23:14.782605",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "clientes.json",
+            "registros": 3
+        },
+        "fecha": "2025-10-01T09:23:18.208151",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "clientes.json",
+            "registros": 3
+        },
+        "fecha": "2025-10-01T09:23:18.221296",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "deudas.json",
+            "registros": 5
+        },
+        "fecha": "2025-10-01T09:23:18.229610",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "clientes.json",
+            "registros": 3
+        },
+        "fecha": "2025-10-01T09:23:28.024143",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "deudas.json",
+            "registros": 5
+        },
+        "fecha": "2025-10-01T09:23:28.038418",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "deudas.json",
+            "registros": 5
+        },
+        "fecha": "2025-10-01T09:23:28.050429",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "deudas.json",
+            "registros": 5
+        },
+        "fecha": "2025-10-01T09:23:28.058788",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "deudas.json",
+            "registros": 5
+        },
+        "fecha": "2025-10-01T09:23:28.069327",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "clientes.json",
+            "registros": 3
+        },
+        "fecha": "2025-10-01T09:23:28.607375",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "productos.json",
+            "registros": 4
+        },
+        "fecha": "2025-10-01T09:23:28.620957",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "categorias.json",
+            "registros": 7
+        },
+        "fecha": "2025-10-01T09:23:32.073407",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "categorias.json",
+            "registros": 7
+        },
+        "fecha": "2025-10-01T09:23:32.086587",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "categorias.json",
+            "registros": 7
+        },
+        "fecha": "2025-10-01T09:23:33.590830",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "categorias.json",
+            "registros": 7
+        },
+        "fecha": "2025-10-01T09:23:33.603208",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "categorias.json",
+            "registros": 7
+        },
+        "fecha": "2025-10-01T09:23:34.004300",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "categorias.json",
+            "registros": 7
+        },
+        "fecha": "2025-10-01T09:23:34.016085",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "categorias.json",
+            "registros": 7
+        },
+        "fecha": "2025-10-01T09:23:34.193635",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "categorias.json",
+            "registros": 7
+        },
+        "fecha": "2025-10-01T09:23:34.202695",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "clientes.json",
+            "registros": 3
+        },
+        "fecha": "2025-10-01T09:23:34.938971",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "clientes.json",
+            "registros": 3
+        },
+        "fecha": "2025-10-01T09:23:34.952801",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "deudas.json",
+            "registros": 5
+        },
+        "fecha": "2025-10-01T09:23:34.966498",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "clientes.json",
+            "registros": 3
+        },
+        "fecha": "2025-10-01T09:23:35.419228",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "clientes.json",
+            "registros": 3
+        },
+        "fecha": "2025-10-01T09:23:35.430057",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "deudas.json",
+            "registros": 5
+        },
+        "fecha": "2025-10-01T09:23:35.438541",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "clientes.json",
+            "registros": 3
+        },
+        "fecha": "2025-10-01T09:23:47.707856",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "clientes.json",
+            "registros": 3
+        },
+        "fecha": "2025-10-01T09:23:47.724325",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "deudas.json",
+            "registros": 5
+        },
+        "fecha": "2025-10-01T09:23:47.738282",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "clientes.json",
+            "registros": 3
+        },
+        "fecha": "2025-10-01T09:24:36.067128",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "clientes.json",
+            "registros": 3
+        },
+        "fecha": "2025-10-01T09:24:36.074360",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "deudas.json",
+            "registros": 5
+        },
+        "fecha": "2025-10-01T09:24:36.080907",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "clientes.json",
+            "registros": 3
+        },
+        "fecha": "2025-10-01T09:24:36.873329",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "clientes.json",
+            "registros": 3
+        },
+        "fecha": "2025-10-01T09:24:36.884211",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "deudas.json",
+            "registros": 5
+        },
+        "fecha": "2025-10-01T09:24:36.893890",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "clientes.json",
+            "registros": 3
+        },
+        "fecha": "2025-10-01T09:24:37.416240",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "clientes.json",
+            "registros": 3
+        },
+        "fecha": "2025-10-01T09:24:37.427302",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "deudas.json",
+            "registros": 5
+        },
+        "fecha": "2025-10-01T09:24:37.436649",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "clientes.json",
+            "registros": 3
+        },
+        "fecha": "2025-10-01T09:25:00.863691",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "clientes.json",
+            "registros": 3
+        },
+        "fecha": "2025-10-01T09:25:00.868187",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "deudas.json",
+            "registros": 5
+        },
+        "fecha": "2025-10-01T09:25:00.873716",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "productos.json",
+            "registros": 4
+        },
+        "fecha": "2025-10-01T09:25:10.386392",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "categorias.json",
+            "registros": 7
+        },
+        "fecha": "2025-10-01T09:25:10.396386",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "productos.json",
+            "registros": 4
+        },
+        "fecha": "2025-10-01T09:25:10.416097",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "productos.json",
+            "registros": 4
+        },
+        "fecha": "2025-10-01T09:25:11.680771",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "categorias.json",
+            "registros": 7
+        },
+        "fecha": "2025-10-01T09:25:11.689781",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "productos.json",
+            "registros": 4
+        },
+        "fecha": "2025-10-01T09:25:11.704633",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "productos.json",
+            "registros": 4
+        },
+        "fecha": "2025-10-01T09:25:11.896389",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "categorias.json",
+            "registros": 7
+        },
+        "fecha": "2025-10-01T09:25:11.904145",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "productos.json",
+            "registros": 4
+        },
+        "fecha": "2025-10-01T09:25:11.917884",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "productos.json",
+            "registros": 4
+        },
+        "fecha": "2025-10-01T09:25:12.116084",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "categorias.json",
+            "registros": 7
+        },
+        "fecha": "2025-10-01T09:25:12.123876",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "productos.json",
+            "registros": 4
+        },
+        "fecha": "2025-10-01T09:25:12.138825",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "ventas.json",
+            "registros": 9
+        },
+        "fecha": "2025-10-01T09:25:13.057097",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "productos.json",
+            "registros": 4
+        },
+        "fecha": "2025-10-01T09:25:13.061411",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "deudas.json",
+            "registros": 5
+        },
+        "fecha": "2025-10-01T09:25:13.069144",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "clientes.json",
+            "registros": 3
+        },
+        "fecha": "2025-10-01T09:25:13.074189",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "ventas.json",
+            "registros": 9
+        },
+        "fecha": "2025-10-01T09:25:14.069306",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "productos.json",
+            "registros": 4
+        },
+        "fecha": "2025-10-01T09:25:14.079070",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "deudas.json",
+            "registros": 5
+        },
+        "fecha": "2025-10-01T09:25:14.085965",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "clientes.json",
+            "registros": 3
+        },
+        "fecha": "2025-10-01T09:25:14.093219",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "ventas.json",
+            "registros": 9
+        },
+        "fecha": "2025-10-01T09:25:14.266233",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "productos.json",
+            "registros": 4
+        },
+        "fecha": "2025-10-01T09:25:14.272504",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "deudas.json",
+            "registros": 5
+        },
+        "fecha": "2025-10-01T09:25:14.279075",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "clientes.json",
+            "registros": 3
+        },
+        "fecha": "2025-10-01T09:25:14.284231",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "ventas.json",
+            "registros": 9
+        },
+        "fecha": "2025-10-01T09:25:14.464839",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "productos.json",
+            "registros": 4
+        },
+        "fecha": "2025-10-01T09:25:14.470460",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "deudas.json",
+            "registros": 5
+        },
+        "fecha": "2025-10-01T09:25:14.477154",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "clientes.json",
+            "registros": 3
+        },
+        "fecha": "2025-10-01T09:25:14.482407",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "ventas.json",
+            "registros": 9
+        },
+        "fecha": "2025-10-01T09:25:15.082183",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "productos.json",
+            "registros": 4
+        },
+        "fecha": "2025-10-01T09:25:15.092282",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "deudas.json",
+            "registros": 5
+        },
+        "fecha": "2025-10-01T09:25:15.100513",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "clientes.json",
+            "registros": 3
+        },
+        "fecha": "2025-10-01T09:25:15.108749",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "ventas.json",
+            "registros": 9
+        },
+        "fecha": "2025-10-01T09:25:15.279588",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "productos.json",
+            "registros": 4
+        },
+        "fecha": "2025-10-01T09:25:15.286468",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "deudas.json",
+            "registros": 5
+        },
+        "fecha": "2025-10-01T09:25:15.292627",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "clientes.json",
+            "registros": 3
+        },
+        "fecha": "2025-10-01T09:25:15.298356",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "ventas.json",
+            "registros": 9
+        },
+        "fecha": "2025-10-01T09:25:15.465382",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "productos.json",
+            "registros": 4
+        },
+        "fecha": "2025-10-01T09:25:15.470771",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "deudas.json",
+            "registros": 5
+        },
+        "fecha": "2025-10-01T09:25:15.477438",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "clientes.json",
+            "registros": 3
+        },
+        "fecha": "2025-10-01T09:25:15.482936",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "productos.json",
+            "registros": 4
+        },
+        "fecha": "2025-10-01T09:25:16.692131",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "categorias.json",
+            "registros": 7
+        },
+        "fecha": "2025-10-01T09:25:16.705075",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "productos.json",
+            "registros": 4
+        },
+        "fecha": "2025-10-01T09:25:16.728907",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "productos.json",
+            "registros": 4
+        },
+        "fecha": "2025-10-01T09:25:17.774385",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "categorias.json",
+            "registros": 7
+        },
+        "fecha": "2025-10-01T09:25:17.784995",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "productos.json",
+            "registros": 4
+        },
+        "fecha": "2025-10-01T09:25:17.801205",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "productos.json",
+            "registros": 4
+        },
+        "fecha": "2025-10-01T09:25:17.967473",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "categorias.json",
+            "registros": 7
+        },
+        "fecha": "2025-10-01T09:25:17.975733",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "productos.json",
+            "registros": 4
+        },
+        "fecha": "2025-10-01T09:25:17.988063",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "productos.json",
+            "registros": 4
+        },
+        "fecha": "2025-10-01T09:25:18.170762",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "categorias.json",
+            "registros": 7
+        },
+        "fecha": "2025-10-01T09:25:18.180028",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "productos.json",
+            "registros": 4
+        },
+        "fecha": "2025-10-01T09:25:18.195032",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "productos.json",
+            "registros": 4
+        },
+        "fecha": "2025-10-01T09:25:19.371702",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "clientes.json",
+            "registros": 3
+        },
+        "fecha": "2025-10-01T09:25:19.386011",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "ventas.json",
+            "registros": 9
+        },
+        "fecha": "2025-10-01T09:25:19.395465",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "deudas.json",
+            "registros": 5
+        },
+        "fecha": "2025-10-01T09:25:19.402171",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "productos.json",
+            "registros": 4
+        },
+        "fecha": "2025-10-01T09:25:20.204882",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "clientes.json",
+            "registros": 3
+        },
+        "fecha": "2025-10-01T09:25:20.213922",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "ventas.json",
+            "registros": 9
+        },
+        "fecha": "2025-10-01T09:25:20.222326",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "deudas.json",
+            "registros": 5
+        },
+        "fecha": "2025-10-01T09:25:20.229034",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "productos.json",
+            "registros": 4
+        },
+        "fecha": "2025-10-01T09:25:20.375870",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "clientes.json",
+            "registros": 3
+        },
+        "fecha": "2025-10-01T09:25:20.381301",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "ventas.json",
+            "registros": 9
+        },
+        "fecha": "2025-10-01T09:25:20.386414",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "deudas.json",
+            "registros": 5
+        },
+        "fecha": "2025-10-01T09:25:20.391626",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "productos.json",
+            "registros": 4
+        },
+        "fecha": "2025-10-01T09:25:21.365440",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "clientes.json",
+            "registros": 3
+        },
+        "fecha": "2025-10-01T09:25:21.374534",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "ventas.json",
+            "registros": 9
+        },
+        "fecha": "2025-10-01T09:25:21.380537",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "deudas.json",
+            "registros": 5
+        },
+        "fecha": "2025-10-01T09:25:21.387262",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "productos.json",
+            "registros": 4
+        },
+        "fecha": "2025-10-01T09:25:21.562140",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "clientes.json",
+            "registros": 3
+        },
+        "fecha": "2025-10-01T09:25:21.568039",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "ventas.json",
+            "registros": 9
+        },
+        "fecha": "2025-10-01T09:25:21.574078",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "deudas.json",
+            "registros": 5
+        },
+        "fecha": "2025-10-01T09:25:21.580334",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "productos.json",
+            "registros": 4
+        },
+        "fecha": "2025-10-01T09:25:21.742784",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "clientes.json",
+            "registros": 3
+        },
+        "fecha": "2025-10-01T09:25:21.747974",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "ventas.json",
+            "registros": 9
+        },
+        "fecha": "2025-10-01T09:25:21.752715",
+        "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "deudas.json",
+            "registros": 5
+        },
+        "fecha": "2025-10-01T09:25:21.758846",
+        "nivel": "CRITICAL"
     }
 ]
