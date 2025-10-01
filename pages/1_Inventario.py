@@ -4,17 +4,10 @@ import pandas as pd
 from backend import productos, categorias
 import io
 
+
 st.set_page_config(page_title="Inventario", layout="wide")
-st.markdown("""
-<style>
-.titulo-principal {font-size:2.2em; font-weight:bold; color:#2c3e50; margin-bottom:0.2em;}
-.subtitulo {font-size:1.3em; color:#2980b9; margin-top:1em;}
-.stButton>button {background-color:#2980b9; color:white; font-weight:bold; border-radius:6px;}
-.stDownloadButton>button {background-color:#27ae60; color:white; font-weight:bold; border-radius:6px;}
-.stDataFrame {background-color:#f8f9fa;}
-</style>
-""", unsafe_allow_html=True)
-st.markdown('<div class="titulo-principal">📦 Inventario de Productos</div>', unsafe_allow_html=True)
+st.title("📦 Gestión de Inventario")
+
 
 if "usuario" not in st.session_state or st.session_state.usuario is None:
     st.warning("Debes iniciar sesión para acceder a esta página.")
