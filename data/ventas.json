@@ -165,5 +165,22 @@
         "total": 1800.0,
         "pagado": 1800.0,
         "tipo_pago": "Efectivo"
+    },
+    {
+        "id": "V010",
+        "fecha": "2025-10-01",
+        "cliente_id": "C002",
+        "productos_vendidos": [
+            {
+                "id_producto": "P005",
+                "nombre": "Licuadora 1.5L",
+                "cantidad": 4,
+                "precio_unitario": 59.96,
+                "subtotal": 239.84
+            }
+        ],
+        "total": 239.84,
+        "pagado": 239.84,
+        "tipo_pago": "Efectivo"
     }
 ]

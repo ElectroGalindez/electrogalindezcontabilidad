@@ -6582,5 +6582,75 @@
         },
         "fecha": "2025-10-01T09:25:21.758846",
         "nivel": "CRITICAL"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "pago_deuda",
+        "detalles": {
+            "deuda_id": "D004",
+            "cliente_id": "C001",
+            "monto_pago": 4454.0,
+            "estado_final": "pendiente"
+        },
+        "fecha": "2025-10-01T11:41:54.382342",
+        "nivel": "INFO"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "registrar_venta",
+        "detalles": {
+            "venta_id": "V010",
+            "cliente_id": "C002",
+            "total": 239.84,
+            "pagado": 239.84,
+            "tipo_pago": "Efectivo",
+            "productos": [
+                {
+                    "id_producto": "P005",
+                    "nombre": "Licuadora 1.5L",
+                    "cantidad": 4,
+                    "precio_unitario": 59.96,
+                    "subtotal": 239.84
+                }
+            ]
+        },
+        "fecha": "2025-10-01T11:47:02.636705",
+        "nivel": "INFO"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "pago_deuda",
+        "detalles": {
+            "deuda_id": "D004",
+            "cliente_id": "C001",
+            "monto_pago": 0.0,
+            "estado_final": "pendiente"
+        },
+        "fecha": "2025-10-01T14:42:49.100265",
+        "nivel": "INFO"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "pago_deuda",
+        "detalles": {
+            "deuda_id": "D004",
+            "cliente_id": "C001",
+            "monto_pago": 0.0,
+            "estado_final": "pendiente"
+        },
+        "fecha": "2025-10-01T14:42:53.217128",
+        "nivel": "INFO"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "pago_deuda",
+        "detalles": {
+            "deuda_id": "D004",
+            "cliente_id": "C001",
+            "monto_pago": 0.0,
+            "estado_final": "pendiente"
+        },
+        "fecha": "2025-10-01T14:43:08.120653",
+        "nivel": "INFO"
     }
 ]
