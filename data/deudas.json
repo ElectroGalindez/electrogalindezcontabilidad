@@ -1,37 +1,20 @@
 [
     {
         "id": "D001",
-        "cliente_id": "C002",
-        "monto": 0.0,
-        "estado": "pagada",
-        "fecha": "2025-09-20"
-    },
-    {
-        "id": "D002",
-        "cliente_id": "C002",
-        "monto": 0.0,
-        "estado": "pagada",
-        "fecha": "2025-09-20"
-    },
-    {
-        "id": "D003",
-        "cliente_id": "C002",
-        "monto": 0.97,
-        "estado": "pendiente",
-        "fecha": "2025-09-20"
-    },
-    {
-        "id": "D004",
         "cliente_id": "C001",
-        "monto": 2946.0,
+        "productos": [
+            {
+                "id_producto": "P001",
+                "nombre": "r",
+                "cantidad": 1,
+                "precio_unitario": 444.0,
+                "subtotal": 444.0,
+                "saldo": 444.0
+            }
+        ],
+        "monto_total": 444.0,
         "estado": "pendiente",
-        "fecha": "2025-09-20"
-    },
-    {
-        "id": "D005",
-        "cliente_id": "C001",
-        "monto": 92814.0,
-        "estado": "pendiente",
-        "fecha": "2025-09-27"
+        "fecha": "2025-10-03",
+        "usuario": "sistema"
     }
 ]

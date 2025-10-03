@@ -182,5 +182,175 @@
         "total": 239.84,
         "pagado": 239.84,
         "tipo_pago": "Efectivo"
+    },
+    {
+        "id": "V011",
+        "fecha": "2025-10-02",
+        "cliente_id": "C005",
+        "productos_vendidos": [
+            {
+                "id_producto": "P006",
+                "nombre": "Aspiradora 1200W",
+                "cantidad": 1,
+                "precio_unitario": 180.0,
+                "subtotal": 180.0
+            }
+        ],
+        "total": 180.0,
+        "pagado": 180.0,
+        "tipo_pago": "Efectivo"
+    },
+    {
+        "id": "V012",
+        "fecha": "2025-10-02",
+        "cliente_id": "C005",
+        "productos_vendidos": [
+            {
+                "id_producto": "P006",
+                "nombre": "Aspiradora 1200W",
+                "cantidad": 1,
+                "precio_unitario": 180.0,
+                "subtotal": 180.0
+            }
+        ],
+        "total": 180.0,
+        "pagado": 0.0,
+        "tipo_pago": null
+    },
+    {
+        "id": "V013",
+        "fecha": "2025-10-02",
+        "cliente_id": "C005",
+        "productos_vendidos": [
+            {
+                "id_producto": "P005",
+                "nombre": "Licuadora 1.5L",
+                "cantidad": 1,
+                "precio_unitario": 60.0,
+                "subtotal": 60.0
+            }
+        ],
+        "total": 60.0,
+        "pagado": 60.0,
+        "tipo_pago": "Efectivo"
+    },
+    {
+        "id": "V014",
+        "fecha": "2025-10-02",
+        "cliente_id": "C005",
+        "productos_vendidos": [
+            {
+                "id_producto": "P006",
+                "nombre": "Aspiradora 1200W",
+                "cantidad": 1,
+                "precio_unitario": 180.0,
+                "subtotal": 180.0
+            }
+        ],
+        "total": 180.0,
+        "pagado": 180.0,
+        "tipo_pago": "Efectivo"
+    },
+    {
+        "id": "V015",
+        "fecha": "2025-10-02",
+        "cliente_id": "C001",
+        "productos_vendidos": [
+            {
+                "id_producto": "P005",
+                "nombre": "Licuadora 1.5L",
+                "cantidad": 1,
+                "precio_unitario": 60.0,
+                "subtotal": 60.0
+            }
+        ],
+        "total": 60.0,
+        "pagado": 60.0,
+        "tipo_pago": "Efectivo"
+    },
+    {
+        "id": "V016",
+        "fecha": "2025-10-03",
+        "cliente_id": "C001",
+        "productos_vendidos": [
+            {
+                "id_producto": "P001",
+                "nombre": "r",
+                "cantidad": 1,
+                "precio_unitario": 444.0,
+                "subtotal": 444.0
+            }
+        ],
+        "total": 444.0,
+        "pagado": 444.0,
+        "tipo_pago": "Efectivo"
+    },
+    {
+        "id": "V017",
+        "fecha": "2025-10-03",
+        "cliente_id": "C001",
+        "productos_vendidos": [
+            {
+                "id_producto": "P001",
+                "nombre": "r",
+                "cantidad": 1,
+                "precio_unitario": 444.0,
+                "subtotal": 444.0
+            }
+        ],
+        "total": 444.0,
+        "pagado": 0.0,
+        "tipo_pago": null
+    },
+    {
+        "id": "V018",
+        "fecha": "2025-10-03",
+        "cliente_id": "C001",
+        "productos_vendidos": [
+            {
+                "id_producto": "P001",
+                "nombre": "r",
+                "cantidad": 1,
+                "precio_unitario": 444.0,
+                "subtotal": 444.0
+            }
+        ],
+        "total": 444.0,
+        "pagado": 444.0,
+        "tipo_pago": "Efectivo"
+    },
+    {
+        "id": "d282cd09",
+        "cliente_id": "C001",
+        "productos_vendidos": [
+            {
+                "id_producto": "P001",
+                "nombre": "r",
+                "cantidad": 1,
+                "precio_unitario": 444.0,
+                "subtotal": 444.0
+            }
+        ],
+        "total": 444.0,
+        "pagado": 444.0,
+        "tipo_pago": "Efectivo",
+        "fecha": "2025-10-03T10:19:15.928863"
+    },
+    {
+        "id": "b8ca030a",
+        "cliente_id": "C001",
+        "productos_vendidos": [
+            {
+                "id_producto": "P001",
+                "nombre": "r",
+                "cantidad": 1,
+                "precio_unitario": 444.0,
+                "subtotal": 444.0
+            }
+        ],
+        "total": 444.0,
+        "pagado": 444.0,
+        "tipo_pago": "Efectivo",
+        "fecha": "2025-10-03T10:21:52.884311"
     }
 ]

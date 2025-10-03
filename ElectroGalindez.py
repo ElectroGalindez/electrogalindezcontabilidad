@@ -2,8 +2,6 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 from pathlib import Path
-import sys
-import os
 
 # ---------------------------
 # Ajuste del path para backend
@@ -11,10 +9,18 @@ import os
 BASE_DIR = Path(__file__).resolve().parent  # ElectroGalindez.py está en la raíz
 DATA_DIR = BASE_DIR / "data"
 BACKUPS_DIR = BASE_DIR / "backups"
+
 # ---------------------------
 # Importar backend
 # ---------------------------
 from backend import productos, clientes, ventas, deudas
+
+# =========================
+# Función utilitaria
+# =========================
+def get_monto_deuda(d: dict) -> float:
+    """Devuelve el monto de una deuda, manejando claves diferentes."""
+    return d.get("monto", d.get("monto_total", 0.0))
 
 # ---------------------------
 # Configuración de la app
@@ -35,8 +41,6 @@ if "usuario" not in st.session_state or st.session_state.usuario is None:
     st.warning("Debes iniciar sesión para acceder a esta página.")
     st.stop()
 
-
-
 # =========================
 # Cargar datos
 # =========================
@@ -46,151 +50,121 @@ ventas_data = ventas.list_sales()
 deudas_data = deudas.list_debts()
 
 # =========================
-# KPIs generales
+# KPIs - Fila 1
 # =========================
-import streamlit as st
-import pandas as pd
-
-st.subheader("📌 Resumen General")
-
-# Columnas para el resumen
-col1, col2, col3, col4, col5 = st.columns(5)
-
-# Total productos y alerta stock bajo
-total_productos = len(productos_data)
-stock_bajo = sum(1 for p in productos_data if p["cantidad"] <= 5)
-stock_alerta = f"⚠️ {stock_bajo} con stock bajo" if stock_bajo else "✅ Stock OK"
-col1.metric(
-    label="📦 Total Productos",
-    value=total_productos,
-    delta=stock_alerta
-)
-
-# Total clientes
-total_clientes = len(clientes_data)
-col2.metric(
-    label="👥 Clientes registrados",
-    value=total_clientes
-)
+col1, col2, col3 = st.columns(3)
 
 # Ventas del día
 if ventas_data:
     df_ventas = pd.DataFrame(ventas_data)
     df_ventas["fecha"] = pd.to_datetime(df_ventas["fecha"])
-    total_dia = df_ventas[df_ventas["fecha"].dt.date == pd.Timestamp.today().date()]["total"].sum()
+    ventas_hoy = df_ventas[df_ventas["fecha"].dt.date == pd.Timestamp.today().date()]
+    total_dia = ventas_hoy["total"].sum()
 else:
+    ventas_hoy = pd.DataFrame()
     total_dia = 0.0
-col3.metric(
-    label="💰 Ventas hoy",
-    value=f"${total_dia:,.2f}",
-    delta="✅ Hoy" if total_dia > 0 else "⚠️ Sin ventas"
-)
+col1.metric("💰 Ventas hoy", f"${total_dia:,.2f}", "✅ Hoy" if total_dia > 0 else "⚠️ Sin ventas")
 
 # Ventas del mes
-if ventas_data:
-    total_mes = df_ventas[df_ventas["fecha"].dt.month == pd.Timestamp.today().month]["total"].sum()
-else:
-    total_mes = 0.0
-col4.metric(
-    label="📈 Ventas mes actual",
-    value=f"${total_mes:,.2f}",
-    delta="✅ En curso" if total_mes > 0 else "⚠️ Sin ventas"
-)
+total_mes = df_ventas[df_ventas["fecha"].dt.month == pd.Timestamp.today().month]["total"].sum() if ventas_data else 0.0
+col2.metric("📈 Ventas mes actual", f"${total_mes:,.2f}", "✅ En curso" if total_mes > 0 else "⚠️ Sin ventas")
 
 # Deudas pendientes
-df_deudas = pd.DataFrame([d for d in deudas_data if d["estado"] == "pendiente"]) if deudas_data else pd.DataFrame()
-total_deuda = df_deudas["monto"].sum() if not df_deudas.empty else 0.0
-col5.metric(
-    label="💳 Deudas pendientes",
-    value=f"${total_deuda:,.2f}",
-    delta="⚠️ Revisar" if total_deuda > 0 else "✅ Sin deudas"
-)
+total_deuda = sum(d.get("monto", 0) for d in deudas_data if d.get("estado") == "pendiente") if deudas_data else 0.0
+col3.metric("💳 Deudas pendientes", f"${total_deuda:,.2f}", "⚠️ Revisar" if total_deuda > 0 else "✅ Sin deudas")
 
-# Opcional: mini gráficos de tendencia (ventas últimos 7 días)
-st.markdown("### 📊 Tendencia de ventas últimos 7 días")
+
+# =========================
+# KPIs - Fila 2
+# =========================
+col1, col2, col3 = st.columns(3)
+
+# Nº ventas hoy
+num_ventas_hoy = len(ventas_hoy) if not ventas_hoy.empty else 0
+col1.metric("🛒 Nº Ventas hoy", num_ventas_hoy)
+
+# Ticket promedio hoy
+ticket_promedio_hoy = ventas_hoy["total"].mean() if not ventas_hoy.empty else 0
+col2.metric("🧾 Ticket promedio (hoy)", f"${ticket_promedio_hoy:,.2f}")
+
+# % de deuda sobre ventas
+total_ventas = df_ventas["total"].sum() if ventas_data else 0
+pct_deuda = (total_deuda / total_ventas * 100) if total_ventas > 0 else 0
+col3.metric("💳 % Deuda sobre ventas", f"{pct_deuda:.1f}%")
+
+
+# =========================
+# KPIs - Fila 3
+# =========================
+col1, col2, col3 = st.columns(3)
+
+# Total productos y stock bajo
+total_productos = len(productos_data)
+stock_bajo = sum(1 for p in productos_data if p["cantidad"] <= 5)
+col1.metric("📦 Total Productos", total_productos, f"⚠️ {stock_bajo} stock bajo" if stock_bajo else "✅ Stock OK")
+
+# Total clientes
+total_clientes = len(clientes_data)
+col2.metric("👥 Clientes registrados", total_clientes)
+
+# Clientes con deuda
+clientes_con_deuda = len([c for c in clientes_data if c.get("deuda_total", 0) > 0])
+col3.metric("👥 Clientes con deuda", clientes_con_deuda)
+
+
+# =========================
+# Gráficos interactivos
+# =========================
+st.subheader("📊 Gráficos de Ventas y Deudas")
+
+# 1. Tendencia últimos 7 días
 if ventas_data:
     ultimos_7 = df_ventas[df_ventas["fecha"] >= (pd.Timestamp.today() - pd.Timedelta(days=7))]
     df_diaria = ultimos_7.groupby(ultimos_7["fecha"].dt.date)["total"].sum().reset_index()
-    st.bar_chart(df_diaria.rename(columns={"fecha": "index"}).set_index("index")["total"])
-else:
-    st.info("No hay ventas registradas en los últimos 7 días")
-
-# =========================
-# Producto más vendid
-# =========================
-st.subheader("🏆 Producto más vendido")
-col1, col2, col3, col4 = st.columns(4)
-
-# Productos más vendidos
-if ventas_data:
-    productos_count = {}
-    for v in ventas_data:
-        for it in v["productos_vendidos"]:
-            pid = it["id_producto"]
-            productos_count[pid] = productos_count.get(pid, 0) + it["cantidad"]
-    if productos_count:
-        top_prod_id = max(productos_count, key=productos_count.get)
-        top_prod = next((p["nombre"] for p in productos_data if p["id"] == top_prod_id), top_prod_id)
-        col1.metric("Producto más vendido", top_prod, f"{productos_count[top_prod_id]} unidades")
-    else:
-        col1.metric("Producto más vendido", "-", "-")
-else:
-    col1.metric("Producto más vendido", "-", "-")
-
-# Cliente con mayor deuda
-if clientes_data and not df_deudas.empty:
-    deudas_por_cliente = df_deudas.groupby("cliente_id")["monto"].sum()
-    cliente_mayor_id = deudas_por_cliente.idxmax()
-    cliente_mayor = next((c["nombre"] for c in clientes_data if c["id"] == cliente_mayor_id), cliente_mayor_id)
-    monto = deudas_por_cliente.max()
-    col2.metric("Cliente mayor deuda", cliente_mayor, f"${monto:,.2f}")
-else:
-    col2.metric("Cliente mayor deuda", "-", "-")
-
-# Venta más alta del mes
-if ventas_data:
-    df_ventas_mes = df_ventas[df_ventas["fecha"].dt.month == pd.Timestamp.today().month]
-    if not df_ventas_mes.empty:
-        max_venta = df_ventas_mes["total"].max()
-        col3.metric("Venta más alta", f"${max_venta:,.2f}")
-    else:
-        col3.metric("Venta más alta", "-", "-")
-else:
-    col3.metric("Venta más alta", "-", "-")
-
-# Promedio de venta por cliente
-if ventas_data and clientes_data:
-    df_ventas_cliente = df_ventas.groupby("cliente_id")["total"].sum()
-    if not df_ventas_cliente.empty:
-        promedio = df_ventas_cliente.mean()
-        col4.metric("Promedio venta/cliente", f"${promedio:,.2f}")
-    else:
-        col4.metric("Promedio venta/cliente", "-", "-")
-else:
-    col4.metric("Promedio venta/cliente", "-", "-")
-
-# =========================
-# Gráficos miniatura
-# =========================
-st.subheader("📊 Gráficos Rápidos")
-
-if ventas_data:
-    # Ventas mensuales
-    df_mensuales = df_ventas.groupby(df_ventas["fecha"].dt.to_period("M"))["total"].sum().reset_index()
-    df_mensuales["fecha"] = df_mensuales["fecha"].astype(str)
-    fig1 = px.bar(df_mensuales, x="fecha", y="total", title="Ventas Mensuales")
+    fig1 = px.bar(df_diaria, x="fecha", y="total", title="Ventas últimos 7 días")
     st.plotly_chart(fig1, use_container_width=True)
 
-    # Porcentaje de ventas por categoría
-    cat_count = {}
-    for v in ventas_data:
-        for it in v["productos_vendidos"]:
-            prod = next((p for p in productos_data if p["id"] == it["id_producto"]), None)
-            if prod:
-                cat = prod.get("categoria", "Sin Categoría")
-                cat_count[cat] = cat_count.get(cat, 0) + it["cantidad"]
-    df_cat = pd.DataFrame([{"categoria": k, "cantidad": v} for k, v in cat_count.items()])
-    if not df_cat.empty:
-        fig2 = px.pie(df_cat, names="categoria", values="cantidad", title="Ventas por Categoría")
-        st.plotly_chart(fig2, use_container_width=True)
+# 2. Ventas mensuales
+if ventas_data:
+    df_mensuales = df_ventas.groupby(df_ventas["fecha"].dt.to_period("M"))["total"].sum().reset_index()
+    df_mensuales["fecha"] = df_mensuales["fecha"].astype(str)
+    fig2 = px.bar(df_mensuales, x="fecha", y="total", title="Ventas Mensuales", text_auto=True)
+    st.plotly_chart(fig2, use_container_width=True)
+
+# 3. Ventas por categoría
+cat_count = {}
+for v in ventas_data:
+    for it in v["productos_vendidos"]:
+        prod = next((p for p in productos_data if p["id"] == it["id_producto"]), None)
+        if prod:
+            cat = prod.get("categoria", "Sin Categoría")
+            cat_count[cat] = cat_count.get(cat, 0) + it["cantidad"]
+df_cat = pd.DataFrame([{"categoria": k, "cantidad": v} for k, v in cat_count.items()])
+if not df_cat.empty:
+    fig3 = px.pie(df_cat, names="categoria", values="cantidad", title="Ventas por Categoría")
+    st.plotly_chart(fig3, use_container_width=True)
+
+# 4. Top 5 clientes
+if ventas_data:
+    top_clientes = df_ventas.groupby("cliente_id")["total"].sum().reset_index()
+    top_clientes = top_clientes.sort_values(by="total", ascending=False).head(5)
+    top_clientes["cliente"] = top_clientes["cliente_id"].apply(
+        lambda cid: next((c["nombre"] for c in clientes_data if c["id"] == cid), str(cid))
+    )
+    fig4 = px.bar(top_clientes, x="cliente", y="total", title="Top 5 Clientes por Ventas", text_auto=True)
+    st.plotly_chart(fig4, use_container_width=True)
+
+# 5. Top 5 productos
+productos_count = {}
+for v in ventas_data:
+    for it in v["productos_vendidos"]:
+        productos_count[it["id_producto"]] = productos_count.get(it["id_producto"], 0) + it["cantidad"]
+df_prod = pd.DataFrame([
+    {"producto": next((p["nombre"] for p in productos_data if p["id"] == pid), str(pid)),
+     "cantidad": cant}
+    for pid, cant in productos_count.items()
+]).sort_values(by="cantidad", ascending=False).head(5)
+if not df_prod.empty:
+    fig5 = px.bar(df_prod, x="producto", y="cantidad", title="Top 5 Productos más vendidos", text_auto=True)
+    st.plotly_chart(fig5, use_container_width=True)
 

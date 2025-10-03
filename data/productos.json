@@ -1,30 +1,9 @@
 [
     {
-        "id": "P002",
-        "nombre": "Refrigerador 300L",
-        "precio": 500.0,
-        "cantidad": 0,
+        "id": "P001",
+        "nombre": "r",
+        "precio": 444.0,
+        "cantidad": 1,
         "categoria": "Refrigeradores"
-    },
-    {
-        "id": "P005",
-        "nombre": "Licuadora 1.5L",
-        "precio": 60.0,
-        "cantidad": 5,
-        "categoria": "Licuadoras"
-    },
-    {
-        "id": "P006",
-        "nombre": "Aspiradora 1200W",
-        "precio": 180.0,
-        "cantidad": 70,
-        "categoria": "Aspiradoras"
-    },
-    {
-        "id": "P2QO26",
-        "nombre": "Ventilador JMD 12 P",
-        "precio": 38.0,
-        "cantidad": 0,
-        "categoria": "Ventiladores"
     }
 ]

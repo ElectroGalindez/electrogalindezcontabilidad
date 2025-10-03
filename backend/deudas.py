@@ -1,116 +1,58 @@
 # backend/deudas.py
-"""
-Módulo para manejar deudas individuales.
-Funciones públicas:
-- list_debts()
-- add_debt(cliente_id, monto, fecha=None, estado='pendiente')
-- pay_debt(debt_id, monto_pago)  # registra pago parcial o total sobre una deuda
-- get_debt(debt_id)
-- debts_by_client(cliente_id)
-"""
-from typing import Optional
-from typing import List, Dict, Any
-from .utils import read_json, write_json_atomic, generate_id, iso_today, validate_debt
-from .clientes import update_debt, get_client
+from typing import List, Dict, Any, Optional
+from .utils import read_json, write_json_atomic, generate_id, iso_today
 
-FILENAME = "deudas.json"
+FILENAME = "../data/deudas.json"  # Ajusta según tu estructura
 
 def list_debts() -> List[Dict[str, Any]]:
+    """Devuelve todas las deudas."""
     return read_json(FILENAME)
 
-def get_debt(debt_id: str) -> Optional[Dict[str, Any]]:
-    for d in list_debts():
-        if d["id"] == debt_id:
-            return d
-    return None
+def debts_by_client(cliente_id: str) -> List[Dict[str, Any]]:
+    """Devuelve las deudas pendientes de un cliente."""
+    return [d for d in list_debts() if d["cliente_id"] == cliente_id and d["estado"] != "pagada"]
 
-def add_debt(cliente_id: str, monto: float, fecha: Optional[str] = None, estado: str = "pendiente", usuario: Optional[str] = None) -> Dict[str, Any]:
+def add_debt(cliente_id: str, productos: List[Dict[str, Any]], usuario: Optional[str] = None) -> Dict[str, Any]:
+    """
+    Crea una nueva deuda por productos.
+    Cada producto debe tener: id_producto, nombre, cantidad, precio_unitario, subtotal, saldo
+    """
     deudas = list_debts()
-    if fecha is None:
-        fecha = iso_today()
-    debt_obj = {
+    total = sum(p["saldo"] for p in productos)
+    nueva_deuda = {
         "id": generate_id("D", deudas),
         "cliente_id": cliente_id,
-        "monto": float(monto),
-        "estado": estado,
-        "fecha": fecha
+        "productos": productos,
+        "monto_total": total,
+        "estado": "pendiente",
+        "fecha": iso_today(),
+        "usuario": usuario or "sistema"
     }
-    if not validate_debt(debt_obj):
-        raise ValueError("Estructura de deuda inválida")
-    deudas.append(debt_obj)
+    deudas.append(nueva_deuda)
     write_json_atomic(FILENAME, deudas)
-    # actualizar deuda_total en clientes
-    update_debt(cliente_id, monto)
-    # Registrar log de creación de deuda
-    try:
-        from .logs import registrar_log
-        registrar_log(usuario or "sistema", "crear_deuda", {
-            "deuda_id": debt_obj["id"],
-            "cliente_id": cliente_id,
-            "monto": monto,
-            "estado": estado
-        })
-    except Exception:
-        pass
-    return debt_obj
+    return nueva_deuda
 
-def pay_debt(debt_id: str, monto_pago: float, usuario: Optional[str] = None) -> Dict[str, Any]:
-    """
-    Aplica monto de pago a una deuda específica.
-    - Si monto_pago >= monto => deuda marcada 'pagada' y monto ajustado a 0.
-    - Si pago parcial => se resta el monto y queda pendiente.
-    También actualiza deuda_total del cliente.
-    """
+def pay_debt(deuda_id: str, monto: float) -> Dict[str, Any]:
+    """Registra un pago sobre una deuda específica y actualiza los saldos por producto."""
     deudas = list_debts()
-    found = False
-    for d in deudas:
-        if d["id"] == debt_id:
-            found = True
-            saldo = float(d["monto"])
-            pago = float(monto_pago)
-            if pago >= saldo:
-                # pago total
-                d["monto"] = 0.0
-                d["estado"] = "pagada"
-                ajuste = -saldo
-            else:
-                d["monto"] = round(saldo - pago, 2)
-                d["estado"] = "pendiente"
-                ajuste = -pago
-            write_json_atomic(FILENAME, deudas)
-            # actualizar cliente
-            update_debt(d["cliente_id"], ajuste)
-            # Registrar log de pago de deuda
-            try:
-                from .logs import registrar_log
-                registrar_log(usuario or "sistema", "pago_deuda", {
-                    "deuda_id": d["id"],
-                    "cliente_id": d["cliente_id"],
-                    "monto_pago": monto_pago,
-                    "estado_final": d["estado"]
-                })
-            except Exception:
-                pass
-            return d
-    if not found:
-        raise KeyError(f"Deuda {debt_id} no encontrada")
+    deuda = next((d for d in deudas if d["id"] == deuda_id), None)
+    if deuda is None:
+        raise KeyError(f"Deuda {deuda_id} no encontrada")
 
-def debts_by_client(cliente_id: str) -> List[Dict[str, Any]]:
-    return [d for d in list_debts() if d["cliente_id"] == cliente_id]
+    if deuda["estado"] == "pagada":
+        return deuda  # ya pagada
 
-# Eliminar deuda
-def delete_debt(debt_id: str, usuario: Optional[str] = None) -> bool:
-    deudas = list_debts()
-    deuda_eliminada = next((d for d in deudas if d["id"] == debt_id), None)
-    deudas = [d for d in deudas if d["id"] != debt_id]
+    restante = monto
+    for prod in deuda["productos"]:
+        if restante <= 0:
+            break
+        saldo_actual = prod["saldo"]
+        abono = min(restante, saldo_actual)
+        prod["saldo"] -= abono
+        restante -= abono
+
+    deuda["monto_total"] = sum(p["saldo"] for p in deuda["productos"])
+    deuda["estado"] = "pagada" if deuda["monto_total"] == 0 else "pendiente"
+
     write_json_atomic(FILENAME, deudas)
-    # Registrar log de eliminación de deuda
-    try:
-        from .logs import registrar_log
-        registrar_log(usuario or "sistema", "eliminar_deuda", {
-            "deuda_id": debt_id,
-            "deuda": deuda_eliminada
-        })
-    except Exception:
-        pass
-    return True
+    return deuda

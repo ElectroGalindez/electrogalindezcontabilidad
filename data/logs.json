@@ -6652,5 +6652,126 @@
         },
         "fecha": "2025-10-01T14:43:08.120653",
         "nivel": "INFO"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "eliminar_producto",
+        "detalles": {
+            "producto_id": "P005",
+            "producto": {
+                "id": "P005",
+                "nombre": "Licuadora 1.5L",
+                "precio": 60.0,
+                "cantidad": 3,
+                "categoria": "Licuadoras"
+            }
+        },
+        "fecha": "2025-10-03T08:36:00.435683",
+        "nivel": "INFO"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "eliminar_producto",
+        "detalles": {
+            "producto_id": "P002",
+            "producto": {
+                "id": "P002",
+                "nombre": "Refrigerador 300L",
+                "precio": 500.0,
+                "cantidad": 0,
+                "categoria": "Refrigeradores"
+            }
+        },
+        "fecha": "2025-10-03T08:36:30.796365",
+        "nivel": "INFO"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "eliminar_producto",
+        "detalles": {
+            "producto_id": "P2QO26",
+            "producto": {
+                "id": "P2QO26",
+                "nombre": "Ventilador JMD 12 P",
+                "precio": 38.0,
+                "cantidad": 0,
+                "categoria": "Ventiladores"
+            }
+        },
+        "fecha": "2025-10-03T08:36:42.587700",
+        "nivel": "INFO"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "eliminar_producto",
+        "detalles": {
+            "producto_id": "P006",
+            "producto": {
+                "id": "P006",
+                "nombre": "Aspiradora 1200W",
+                "precio": 180.0,
+                "cantidad": 67,
+                "categoria": "Aspiradoras"
+            }
+        },
+        "fecha": "2025-10-03T08:36:46.375958",
+        "nivel": "INFO"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "crear_producto",
+        "detalles": {
+            "producto_id": "P001",
+            "nombre": "sfsfsfd",
+            "precio": 344.0,
+            "cantidad": 1222,
+            "categoria": "Lavadoras"
+        },
+        "fecha": "2025-10-03T08:47:06.501278",
+        "nivel": "INFO"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "editar_producto",
+        "detalles": {
+            "producto_id": "P001",
+            "cambios": {
+                "nombre": "sfsfsfd",
+                "precio": 344.0,
+                "cantidad": 1,
+                "categoria": "Lavadoras"
+            }
+        },
+        "fecha": "2025-10-03T08:47:34.165101",
+        "nivel": "INFO"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "eliminar_producto",
+        "detalles": {
+            "producto_id": "P001",
+            "producto": {
+                "id": "P001",
+                "nombre": "sfsfsfd",
+                "precio": 344.0,
+                "cantidad": 1,
+                "categoria": "Lavadoras"
+            }
+        },
+        "fecha": "2025-10-03T08:48:00.527986",
+        "nivel": "INFO"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "crear_producto",
+        "detalles": {
+            "producto_id": "P001",
+            "nombre": "r",
+            "precio": 444.0,
+            "cantidad": 4,
+            "categoria": "Refrigeradores"
+        },
+        "fecha": "2025-10-03T09:34:15.990566",
+        "nivel": "INFO"
     }
 ]

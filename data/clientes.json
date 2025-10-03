@@ -1,20 +1,10 @@
 [
     {
         "id": "C001",
-        "nombre": "Juan Perez",
-        "telefono": "555-1234",
-        "deuda_total": 95760.0
-    },
-    {
-        "id": "C002",
-        "nombre": "Maria Lopez",
-        "telefono": "555-5678",
-        "deuda_total": 0.9699999999993452
-    },
-    {
-        "id": "C003",
-        "nombre": "Vicente Cao",
-        "telefono": "58956749",
+        "nombre": "d",
+        "telefono": "d",
+        "ci": "d",
+        "chapa": "d",
         "deuda_total": 0.0
     }
 ]
