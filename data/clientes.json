@@ -14,5 +14,13 @@
         "ci": "123456",
         "chapa": "123456",
         "deuda_total": 0.0
+    },
+    {
+        "id": "C003",
+        "nombre": "lionel",
+        "telefono": "12345",
+        "ci": "234567",
+        "chapa": "12345",
+        "deuda_total": 0.0
     }
 ]
