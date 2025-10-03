@@ -30,5 +30,13 @@
         "ci": "23456",
         "chapa": "123456",
         "deuda_total": 0.0
+    },
+    {
+        "id": "C005",
+        "nombre": "hfuhg",
+        "telefono": "123456",
+        "ci": "234rty",
+        "chapa": "23456y",
+        "deuda_total": 0.0
     }
 ]

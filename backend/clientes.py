@@ -1,114 +1,70 @@
-
-"""
-Módulo para manejo de clientes.
-Funciones públicas:
-- list_clients()
-- get_client(cliente_id)
-- add_client(nombre, telefono)
-- edit_client(cliente_id, cambios)
-- update_debt(cliente_id, monto)  # suma (o resta) deuda_total
-"""
-
-from typing import List, Dict, Any, Optional
-from .utils import read_json, write_json_atomic, generate_id, validate_client
-
-FILENAME = "clientes.json"
-
+# backend/clientes.py
+from backend.db import engine
+from sqlalchemy import text
+from .logs import registrar_log
 
 # ---------------------------
-# LISTAR Y OBTENER CLIENTES
+# Listar todos los clientes
 # ---------------------------
-def list_clients() -> List[Dict[str, Any]]:
-    return read_json(FILENAME)
-
-
-def get_client(cliente_id: str) -> Optional[Dict[str, Any]]:
-    clients = list_clients()
-    for c in clients:
-        if c["id"] == cliente_id:
-            return c
-    return None
-
+def list_clients():
+    with engine.connect() as conn:
+        result = conn.execute(text("SELECT * FROM clientes ORDER BY nombre"))
+        return [dict(r) for r in result]
 
 # ---------------------------
-# AGREGAR CLIENTE
+# Obtener cliente por ID
 # ---------------------------
-def add_client(nombre: str, telefono: str = "", ci: str = "", chapa: str = "") -> Dict[str, Any]:
-    clients = list_clients()
-    nuevo_cliente = {
-        "id": generate_id("C", clients),
-        "nombre": nombre,
-        "telefono": telefono,
-        "ci": ci,
-        "chapa": chapa,
-        "deuda_total": 0.0
-    }
-    clients.append(nuevo_cliente)
-    write_json_atomic("clientes.json", clients)
-    return nuevo_cliente  # ✅ importante devolverlo
-
+def get_client(cliente_id):
+    with engine.connect() as conn:
+        result = conn.execute(text("SELECT * FROM clientes WHERE id=:id"), {"id": cliente_id}).fetchone()
+    return dict(result) if result else None
 
 # ---------------------------
-# EDITAR CLIENTE
+# Agregar cliente
 # ---------------------------
-def edit_client(cliente_id: str, cambios: Dict[str, Any], usuario=None) -> Dict[str, Any]:
-    """
-    Permite actualizar datos del cliente.
-    Ejemplo: edit_client("C1", {"nombre": "Nuevo Nombre", "telefono": "123"})
-    """
-    clients = list_clients()
-    for c in clients:
-        if c["id"] == cliente_id:
-            c.update(cambios)
-            if not validate_client(c):
-                raise ValueError("Datos de cliente inválidos tras la edición")
-            write_json_atomic(FILENAME, clients)
-            # Registrar log de edición de cliente
-            try:
-                from .logs import registrar_log
-                registrar_log(usuario or "sistema", "editar_cliente", {
-                    "cliente_id": cliente_id,
-                    "cambios": cambios
-                })
-            except Exception:
-                pass
-            return c
-    raise KeyError(f"Cliente {cliente_id} no encontrado")
-
+def add_client(nombre, telefono="", ci="", chapa="", usuario=None):
+    with engine.begin() as conn:
+        result = conn.execute(
+            text(
+                "INSERT INTO clientes (nombre, telefono, ci, chapa, deuda_total) "
+                "VALUES (:nombre, :telefono, :ci, :chapa, 0) RETURNING id"
+            ),
+            {"nombre": nombre, "telefono": telefono, "ci": ci, "chapa": chapa}
+        )
+        cliente_id = result.fetchone()[0]
+    registrar_log(usuario or "sistema", "crear_cliente", {"cliente_id": cliente_id, "nombre": nombre})
+    return get_client(cliente_id)
 
 # ---------------------------
-# ACTUALIZAR DEUDA
+# Editar cliente
 # ---------------------------
-def update_debt(cliente_id: str, monto: float) -> Dict[str, Any]:
-    """
-    Suma (monto positivo) o resta (monto negativo) la deuda_total del cliente.
-    Devuelve el cliente actualizado.
-    """
-    clients = list_clients()
-    for c in clients:
-        if c["id"] == cliente_id:
-            c["deuda_total"] = float(c.get("deuda_total", 0.0)) + float(monto)
-            # Evitar deuda negativa
-            if c["deuda_total"] < 0:
-                c["deuda_total"] = 0.0
-            write_json_atomic(FILENAME, clients)
-            return c
-    raise KeyError(f"Cliente {cliente_id} no encontrado")
+def edit_client(cliente_id, cambios, usuario=None):
+    set_clause = ", ".join([f"{k}=:{k}" for k in cambios])
+    cambios["id"] = cliente_id
+    with engine.begin() as conn:
+        conn.execute(text(f"UPDATE clientes SET {set_clause} WHERE id=:id"), cambios)
+    registrar_log(usuario or "sistema", "editar_cliente", {"cliente_id": cliente_id, "cambios": cambios})
+    return get_client(cliente_id)
+
 # ---------------------------
-# ELIMINAR CLIENTE
+# Actualizar deuda total
 # ---------------------------
-def delete_client(cliente_id: str, usuario=None) -> bool:
-    clients = list_clients()
-    cliente_eliminado = next((c for c in clients if c["id"] == cliente_id), None)
-    clients = [c for c in clients if c["id"] != cliente_id]
-    write_json_atomic(FILENAME, clients)
-    # Registrar log de eliminación de cliente
-    try:
-        from .logs import registrar_log
-        registrar_log(usuario or "sistema", "eliminar_cliente", {
-            "cliente_id": cliente_id,
-            "cliente": cliente_eliminado
-        })
-    except Exception:
-        pass
-    return True
+def update_debt(cliente_id, monto):
+    with engine.begin() as conn:
+        conn.execute(
+            text("UPDATE clientes SET deuda_total = GREATEST(deuda_total + :monto, 0) WHERE id=:id"),
+            {"id": cliente_id, "monto": monto}
+        )
+    return get_client(cliente_id)
+
+# ---------------------------
+# Eliminar cliente
+# ---------------------------
+def delete_client(cliente_id, usuario=None):
+    cliente = get_client(cliente_id)
+    if not cliente:
+        return None
+    with engine.begin() as conn:
+        conn.execute(text("DELETE FROM clientes WHERE id=:id"), {"id": cliente_id})
+    registrar_log(usuario or "sistema", "eliminar_cliente", {"cliente_id": cliente_id, "cliente": cliente})
+    return cliente
