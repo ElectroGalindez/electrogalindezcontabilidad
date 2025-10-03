@@ -352,5 +352,22 @@
         "pagado": 444.0,
         "tipo_pago": "Efectivo",
         "fecha": "2025-10-03T10:21:52.884311"
+    },
+    {
+        "id": "f31bf929",
+        "cliente_id": "C001",
+        "productos_vendidos": [
+            {
+                "id_producto": "P001",
+                "nombre": "r",
+                "cantidad": 1,
+                "precio_unitario": 444.0,
+                "subtotal": 444.0
+            }
+        ],
+        "total": 444.0,
+        "pagado": 444.0,
+        "tipo_pago": "Efectivo",
+        "fecha": "2025-10-03T12:27:31.909503"
     }
 ]
