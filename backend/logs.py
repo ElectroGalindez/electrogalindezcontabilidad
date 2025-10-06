@@ -2,28 +2,26 @@
 from datetime import datetime
 from typing import List, Dict, Any
 from sqlalchemy import text
-from .db import get_connection  # Función que devuelve conexión SQLAlchemy
+from .db import engine  # Función que devuelve conexión SQLAlchemy
 
 # ---------------------------
 # Registrar un log
 # ---------------------------
-def registrar_log(usuario: str, accion: str, detalles: Dict[str, Any] = None) -> Dict[str, Any]:
-    """
-    Inserta un registro de log en la base de datos.
-    """
-    conn = get_connection()
-    detalles = detalles or {}
-    fecha = datetime.now()
-    result = conn.execute(
-        text("""
-            INSERT INTO logs (usuario, accion, detalles, fecha)
-            VALUES (:usuario, :accion, :detalles::jsonb, :fecha)
-            RETURNING *
-        """),
-        {"usuario": usuario, "accion": accion, "detalles": json.dumps(detalles), "fecha": fecha}
-    )
-    conn.commit()
-    return dict(result.fetchone())
+
+def registrar_log(usuario, accion, detalles=None):
+    with engine.begin() as conn:  # usa begin() para transacción automática
+        conn.execute(
+            text(
+                "INSERT INTO logs (usuario, accion, detalles, fecha) "
+                "VALUES (:usuario, :accion, :detalles, :fecha)"
+            ),
+            {
+                "usuario": usuario,
+                "accion": accion,
+                "detalles": str(detalles or {}),
+                "fecha": datetime.now()
+            }
+        )
 
 # ---------------------------
 # Listar todos los logs

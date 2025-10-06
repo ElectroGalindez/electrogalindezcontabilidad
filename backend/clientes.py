@@ -1,113 +1,109 @@
 # backend/clientes.py
 from typing import List, Dict, Any, Optional
+from datetime import datetime
 from sqlalchemy import text
-from .db import get_connection
+from .db import engine
+from .logs import registrar_log
+from .db import engine
+from .utils import generate_id
 from .logs import registrar_log
 
 # ---------------------------
 # LISTAR Y OBTENER CLIENTES
 # ---------------------------
-
 def list_clients() -> List[Dict[str, Any]]:
-    conn = get_connection()
-    result = conn.execute(text("SELECT * FROM clientes ORDER BY nombre"))
-    return [dict(row) for row in result.fetchall()]
+    with engine.connect() as conn:
+        result = conn.execute(text("SELECT * FROM clientes ORDER BY nombre"))
+        return [dict(r._mapping) for r in result]
 
 def get_client(cliente_id: str) -> Optional[Dict[str, Any]]:
-    conn = get_connection()
-    result = conn.execute(text("SELECT * FROM clientes WHERE id = :id"), {"id": cliente_id})
-    row = result.fetchone()
-    return dict(row) if row else None
+    with engine.connect() as conn:
+        result = conn.execute(text("SELECT * FROM clientes WHERE id = :id"), {"id": cliente_id})
+        row = result.first()
+        return dict(row._mapping) if row else None
 
 # ---------------------------
 # AGREGAR CLIENTE
 # ---------------------------
-
-def add_client(
-    nombre: str,
-    telefono: str = "",
-    ci: str = "",
-    chapa: str = "",
-    direccion: str = "",
-    usuario: str = None
-) -> Dict[str, Any]:
-
-    if not nombre.strip():
-        raise ValueError("El nombre del cliente no puede estar vacío")
-
-    conn = get_connection()
-    # Comprobar si ya existe cliente con mismo CI o nombre
-    result = conn.execute(text("SELECT * FROM clientes WHERE ci = :ci OR nombre = :nombre"), {"ci": ci, "nombre": nombre})
-    if result.fetchone():
-        raise ValueError(f"Cliente '{nombre}' ya existe")
-
-    # Insertar cliente
-    result = conn.execute(
-        text("""
-            INSERT INTO clientes (nombre, telefono, ci, chapa, direccion, deuda_total)
-            VALUES (:nombre, :telefono, :ci, :chapa, :direccion, 0)
-            RETURNING *
-        """),
-        {"nombre": nombre, "telefono": telefono, "ci": ci, "chapa": chapa, "direccion": direccion}
-    )
-    conn.commit()
-    cliente = dict(result.fetchone())
-
-    registrar_log(usuario or "sistema", "crear_cliente", cliente)
-    return cliente
-
+def add_client(nombre, telefono, ci, chapa, direccion):
+    with engine.begin() as conn:  # abre una transacción automáticamente
+        query = text("""
+            INSERT INTO clientes (nombre, telefono, ci, chapa, direccion)
+            VALUES (:nombre, :telefono, :ci, :chapa, :direccion)
+            RETURNING id, nombre
+        """)
+        result = conn.execute(query, {
+            "nombre": nombre,
+            "telefono": telefono,
+            "ci": ci,
+            "chapa": chapa,
+            "direccion": direccion
+        })
+        row = result.fetchone()
+        return row._mapping if row else None
 # ---------------------------
 # EDITAR CLIENTE
 # ---------------------------
-
-def update_client(cliente_id: str, nuevos_datos: Dict[str, Any], usuario: str = None) -> Dict[str, Any]:
-    conn = get_connection()
-    cliente = get_client(cliente_id)
-    if not cliente:
-        raise KeyError(f"Cliente {cliente_id} no encontrado")
-
-    # Actualizar solo campos permitidos
-    campos = {k: v for k, v in nuevos_datos.items() if k in ["nombre", "telefono", "ci", "chapa", "direccion"]}
-    if not campos:
-        raise ValueError("No hay campos válidos para actualizar")
-
-    set_clause = ", ".join([f"{k} = :{k}" for k in campos])
-    campos["id"] = cliente_id
-    conn.execute(text(f"UPDATE clientes SET {set_clause} WHERE id = :id"), campos)
-    conn.commit()
-
-    cliente_actualizado = get_client(cliente_id)
-    registrar_log(usuario or "sistema", "editar_cliente", {"cliente_id": cliente_id, "cambios": campos})
-    return cliente_actualizado
+def edit_client(cliente_id: str, cambios: Dict[str, Any], usuario=None) -> Dict[str, Any]:
+    sets = ", ".join([f"{k} = :{k}" for k in cambios])
+    query = text(f"UPDATE clientes SET {sets} WHERE id = :id")
+    with engine.connect() as conn:
+        conn.execute(query, {**cambios, "id": cliente_id})
+        conn.commit()
+    registrar_log(usuario or "sistema", "editar_cliente", {"cliente_id": cliente_id, "cambios": cambios})
+    return get_client(cliente_id)
 
 # ---------------------------
 # ELIMINAR CLIENTE
 # ---------------------------
-
-def delete_client(cliente_id: str, usuario: str = None) -> bool:
-    conn = get_connection()
-    cliente = get_client(cliente_id)
-    if not cliente:
-        raise KeyError(f"Cliente {cliente_id} no encontrado")
-
-    conn.execute(text("DELETE FROM clientes WHERE id = :id"), {"id": cliente_id})
-    conn.commit()
-
-    registrar_log(usuario or "sistema", "eliminar_cliente", {"cliente_id": cliente_id, "cliente": cliente})
+def delete_client(cliente_id: str, usuario=None) -> bool:
+    with engine.connect() as conn:
+        conn.execute(text("DELETE FROM clientes WHERE id = :id"), {"id": cliente_id})
+        conn.commit()
+    registrar_log(usuario or "sistema", "eliminar_cliente", {"cliente_id": cliente_id})
     return True
 
 # ---------------------------
 # ACTUALIZAR DEUDA
 # ---------------------------
-
 def update_debt(cliente_id: str, monto: float) -> Dict[str, Any]:
-    conn = get_connection()
-    cliente = get_client(cliente_id)
-    if not cliente:
-        raise KeyError(f"Cliente {cliente_id} no encontrado")
+    with engine.connect() as conn:
+        conn.execute(text("UPDATE clientes SET deuda_total = GREATEST(deuda_total + :monto, 0) WHERE id = :id"), {"id": cliente_id, "monto": monto})
+        conn.commit()
+    return get_client(cliente_id)
 
-    nueva_deuda = max(0, cliente.get("deuda_total", 0) + monto)
-    conn.execute(text("UPDATE clientes SET deuda_total = :deuda WHERE id = :id"), {"deuda": nueva_deuda, "id": cliente_id})
-    conn.commit()
-    cliente_actualizado = get_client(cliente_id)
-    return cliente_actualizado
+def update_client(client_id: str, nombre: str = None, telefono: str = None, ci: str = None, chapa: str = None, direccion: str = None, usuario: str = None):
+    """Actualiza los datos de un cliente existente"""
+    with engine.begin() as conn:
+        # Obtener cliente actual
+        cliente = get_client(client_id)
+        if not cliente:
+            raise ValueError(f"No existe el cliente con ID {client_id}")
+
+        # Preparar nuevos valores
+        nombre = nombre or cliente["nombre"]
+        telefono = telefono or cliente.get("telefono", "")
+        ci = ci or cliente.get("ci", "")
+        chapa = chapa or cliente.get("chapa", "")
+        direccion = direccion or cliente.get("direccion", "")
+
+        query = text("""
+            UPDATE clientes
+            SET nombre = :nombre,
+                telefono = :telefono,
+                ci = :ci,
+                chapa = :chapa,
+                direccion = :direccion
+            WHERE id = :id
+        """)
+        conn.execute(query, {
+            "id": client_id,
+            "nombre": nombre,
+            "telefono": telefono,
+            "ci": ci,
+            "chapa": chapa,
+            "direccion": direccion
+        })
+
+    registrar_log(usuario or "sistema", "update_client", {"id": client_id})
+    return get_client(client_id)

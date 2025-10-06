@@ -28,7 +28,7 @@ categorias_lista = categorias.list_categories()
 
 # Mapear categorías id <-> nombre
 cat_id_to_name = {c["id"]: c["nombre"] for c in categorias_lista}
-cat_name_to_id = {c["nombre"]: c["id"] for c in categorias_lista}
+cat_id_to_name = {c["id"]: c["nombre"] for c in categorias_lista}
 
 # ---------------------------
 # Preparar DataFrame para mostrar inventario
@@ -111,22 +111,19 @@ with colB:
 # Botones de acción
 # ---------------------------
 col1, col2, col3 = st.columns([1,1,1])
-cat_id = cat_name_to_id[categoria_nombre]
+cat_id = next((c["id"] for c in categorias_lista if c["nombre"] == categoria_nombre), None)
 
 # Guardar
 with col1:
     if st.button("💾 Guardar"):
-        if producto_actual:
-            productos.editar_producto(producto_actual["id"], {
-                "nombre": nombre,
-                "precio": precio,
-                "cantidad": cantidad,
-                "categoria_id": cat_id
-            }, usuario=st.session_state.usuario["username"])
-            st.success(f"Producto '{nombre}' actualizado ✅")
-        else:
-            productos.agregar_producto(nombre, precio, cantidad, cat_id, usuario=st.session_state.usuario["username"])
-            st.success(f"Producto '{nombre}' creado ✅")
+        producto = productos.guardar_producto(
+            nombre=nombre,
+            precio=precio,
+            cantidad=cantidad,
+            categoria_id=cat_id,
+            usuario=st.session_state.usuario["username"]
+        )
+        st.success(f"Producto '{nombre}' guardado ✅")
         st.experimental_rerun()
 
 # Eliminar

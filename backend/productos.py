@@ -1,143 +1,140 @@
-
-from .utils import read_json, write_json_atomic, generate_id, validate_product
-
-FILENAME = "productos.json"
-
-# =============================
-# Función interna para generar ID
-# =============================
+# backend/productos.py
+from typing import List, Dict, Any
+from sqlalchemy import text
+from .db import engine
+from .logs import registrar_log
+from typing import Optional
 
 
-# =============================
-# Cargar y guardar productos
-# =============================
+# ---------------------------
+# LISTAR PRODUCTOS
+# ---------------------------
+def list_products() -> List[Dict[str, Any]]:
+    with engine.connect() as conn:
+        result = conn.execute(text("SELECT * FROM productos ORDER BY nombre"))
+        return [dict(r._mapping) for r in result]
 
-def cargar_productos():
-    return read_json(FILENAME)
-
-
-def guardar_productos(productos):
-    write_json_atomic(FILENAME, productos)
-
-# =============================
-# Validaciones
-# =============================
-
-def _validar_producto(nombre, precio, cantidad, categoria, ignorar_id=None):
-    if not nombre.strip():
+# ---------------------------
+# AGREGAR PRODUCTO
+# ---------------------------
+def guardar_producto(
+    nombre: str,
+    precio: float,
+    cantidad: int,
+    categoria_id: str,
+    usuario: Optional[str] = None
+) -> dict:
+    """
+    Crea un nuevo producto o edita uno existente si ya existe.
+    Devuelve el producto creado/actualizado como diccionario.
+    """
+    nombre = nombre.strip()
+    if not nombre:
         raise ValueError("El nombre del producto no puede estar vacío.")
-    if precio <= 0:
-        raise ValueError("El precio debe ser mayor que 0.")
-    if cantidad < 0:
-        raise ValueError("La cantidad no puede ser negativa.")
-    if not categoria.strip():
-        raise ValueError("La categoría no puede estar vacía.")
-    productos = cargar_productos()
-    for p in productos:
-        if p["nombre"].lower() == nombre.lower() and p["id"] != ignorar_id:
-            raise ValueError(f"Ya existe un producto con el nombre '{nombre}'.")
 
-# =============================
-# Funciones CRUD
-# =============================
+    with engine.begin() as conn:
+        # Verificar si ya existe un producto con ese nombre
+        select_query = text("SELECT * FROM productos WHERE nombre = :nombre")
+        existing = conn.execute(select_query, {"nombre": nombre}).mappings().fetchone()
 
-def agregar_producto(nombre, precio, cantidad, categoria, usuario=None):
-    _validar_producto(nombre, precio, cantidad, categoria)
-    productos = cargar_productos()
-    nuevo = {
-        "id": generate_id("P", productos),
-        "nombre": nombre.strip(),
-        "precio": round(float(precio), 2),
-        "cantidad": int(cantidad),
-        "categoria": categoria.strip()
-    }
-    if not validate_product(nuevo):
-        raise ValueError("Estructura de producto inválida")
-    productos.append(nuevo)
-    guardar_productos(productos)
-    # Registrar log de creación de producto
-    try:
-        from .logs import registrar_log
-        registrar_log(usuario or "sistema", "crear_producto", {
-            "producto_id": nuevo["id"],
-            "nombre": nombre,
-            "precio": precio,
-            "cantidad": cantidad,
-            "categoria": categoria
-        })
-    except Exception:
-        pass
-    return nuevo
+        if existing:
+            # Editar producto existente
+            update_query = text("""
+                UPDATE productos
+                SET precio = :precio,
+                    cantidad = :cantidad,
+                    categoria_id = :categoria_id
+                WHERE id = :id
+                RETURNING *
+            """)
+            updated = conn.execute(update_query, {
+                "precio": precio,
+                "cantidad": cantidad,
+                "categoria_id": categoria_id,
+                "id": existing["id"]
+            }).mappings().fetchone()
 
-
-def editar_producto(producto_id, nuevos_datos, usuario=None):
-    _validar_producto(
-        nuevos_datos["nombre"],
-        nuevos_datos["precio"],
-        nuevos_datos["cantidad"],
-        nuevos_datos["categoria"],
-        ignorar_id=producto_id
-    )
-    productos = cargar_productos()
-    for p in productos:
-        if p["id"] == producto_id:
-            p.update({
-                "nombre": nuevos_datos["nombre"],
-                "precio": round(float(nuevos_datos["precio"]), 2),
-                "cantidad": int(nuevos_datos["cantidad"]),
-                "categoria": nuevos_datos["categoria"]
+            registrar_log(usuario or "sistema", "editar_producto", {
+                "id": updated["id"],
+                "nombre": nombre,
+                "precio": precio,
+                "cantidad": cantidad,
+                "categoria_id": categoria_id
             })
-            if not validate_product(p):
-                raise ValueError("Estructura de producto inválida tras edición")
-            # Registrar log de edición de producto
-            try:
-                from .logs import registrar_log
-                registrar_log(usuario or "sistema", "editar_producto", {
-                    "producto_id": producto_id,
-                    "cambios": nuevos_datos
-                })
-            except Exception:
-                pass
-            break
-    guardar_productos(productos)
 
+            return dict(updated)
 
-def eliminar_producto(producto_id, usuario=None):
-    productos = cargar_productos()
-    producto_eliminado = next((p for p in productos if p["id"] == producto_id), None)
-    productos = [p for p in productos if p["id"] != producto_id]
-    guardar_productos(productos)
-    # Registrar log de eliminación de producto
-    try:
-        from .logs import registrar_log
-        registrar_log(usuario or "sistema", "eliminar_producto", {
-            "producto_id": producto_id,
-            "producto": producto_eliminado
-        })
-    except Exception:
-        pass
+        else:
+            # Crear nuevo producto
+            insert_query = text("""
+                INSERT INTO productos (nombre, precio, cantidad, categoria_id)
+                VALUES (:nombre, :precio, :cantidad, :categoria_id)
+                RETURNING *
+            """)
+            new_prod = conn.execute(insert_query, {
+                "nombre": nombre,
+                "precio": precio,
+                "cantidad": cantidad,
+                "categoria_id": categoria_id
+            }).mappings().fetchone()
 
-# =============================
-# Funciones de consulta
-# =============================
+            registrar_log(usuario or "sistema", "crear_producto", {
+                "id": new_prod["id"],
+                "nombre": nombre,
+                "precio": precio,
+                "cantidad": cantidad,
+                "categoria_id": categoria_id
+            })
 
-def get_product(producto_id):
-    productos = cargar_productos()
-    return next((p for p in productos if p["id"] == producto_id), None)
+            return dict(new_prod)
+# ---------------------------
+# OBTENER PRODUCTO
+# ---------------------------
+def get_product(producto_id: str) -> Dict[str, Any]:
+    with engine.connect() as conn:
+        result = conn.execute(text("SELECT * FROM productos WHERE id = :id"), {"id": producto_id})
+        row = result.first()
+        return dict(row._mapping) if row else None
 
-def list_products():
-    return cargar_productos()
+# ---------------------------
+# ELIMINAR PRODUCTO
+# ---------------------------
+def delete_product(producto_id: str, usuario=None) -> bool:
+    with engine.connect() as conn:
+        conn.execute(text("DELETE FROM productos WHERE id = :id"), {"id": producto_id})
+        conn.commit()
+    
+    registrar_log(usuario or "sistema", "eliminar_producto", {"id": producto_id})
+    return True
 
-def adjust_stock(producto_id, cantidad_cambio):
-    productos = cargar_productos()
-    producto = next((p for p in productos if p["id"] == producto_id), None)
-    if not producto:
-        raise ValueError(f"Producto con ID '{producto_id}' no encontrado.")
-    nuevo_stock = producto["cantidad"] + cantidad_cambio
-    if nuevo_stock < 0:
-        raise ValueError(f"No hay suficiente stock para '{producto['nombre']}'")
-    producto["cantidad"] = nuevo_stock
-    if not validate_product(producto):
-        raise ValueError("Estructura de producto inválida tras ajuste de stock")
-    guardar_productos(productos)
-    return producto
+# ---------------------------
+#   adjust_stock
+# ---------------------------
+
+def adjust_stock(product_id: str, cantidad_delta: int, usuario=None) -> dict:
+    """
+    Ajusta el stock de un producto sumando o restando cantidad_delta.
+    Devuelve el producto actualizado.
+    """
+    with engine.begin() as conn:
+        # Obtener stock actual
+        result = conn.execute(text("SELECT cantidad FROM productos WHERE id = :id"), {"id": product_id})
+        prod = result.mappings().first()
+        if not prod:
+            raise ValueError(f"Producto {product_id} no encontrado")
+        
+        nuevo_stock = prod["cantidad"] + cantidad_delta
+        if nuevo_stock < 0:
+            raise ValueError(f"Stock insuficiente para {prod['nombre']}")
+        
+        conn.execute(
+            text("UPDATE productos SET cantidad = :cantidad WHERE id = :id"),
+            {"cantidad": nuevo_stock, "id": product_id}
+        )
+        
+        # Opcional: registrar log
+        if usuario:
+            from .logs import registrar_log
+            registrar_log(usuario, "ajustar_stock", {"producto_id": product_id, "delta": cantidad_delta})
+        
+        return {**prod, "cantidad": nuevo_stock}

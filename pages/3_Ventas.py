@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime
+import json
 from backend import productos, clientes, ventas
 
 st.set_page_config(page_title="Ventas", layout="wide")
@@ -26,19 +27,20 @@ if clientes_dict:
     cliente_nombre = st.selectbox(
         "Selecciona un cliente existente",
         [""] + list(clientes_dict.keys()),
-        key="select_cliente_existente"
+        key="select_cliente_ventas"
     )
+
     if cliente_nombre:
         cliente_id = clientes_dict[cliente_nombre]
 
 # Crear nuevo cliente
 with st.expander("➕ Agregar nuevo cliente"):
     with st.form("form_nuevo_cliente", clear_on_submit=True):
-        nombre_nuevo = st.text_input("Nombre del cliente", key="nuevo_nombre")
-        telefono_nuevo = st.text_input("Teléfono", key="nuevo_telefono")
-        ci_nuevo = st.text_input("C.I.", key="nuevo_ci")
-        chapa_nueva = st.text_input("Chapa", key="nuevo_chapa")
-        direccion_nueva = st.text_input("Dirección", key="nuevo_direccion")
+        nombre_nuevo = st.text_input("Nombre del cliente")
+        telefono_nuevo = st.text_input("Teléfono")
+        ci_nuevo = st.text_input("C.I.")
+        chapa_nueva = st.text_input("Chapa")
+        direccion_nueva = st.text_input("Dirección")
         submitted = st.form_submit_button("Guardar Cliente")
         if submitted:
             if nombre_nuevo.strip() == "":
@@ -55,102 +57,100 @@ with st.expander("➕ Agregar nuevo cliente"):
                 st.success(f"✅ Cliente agregado: {nuevo_cliente['nombre']}")
                 cliente_id = nuevo_cliente["id"]
 
-# ---------------------------
-# Inicializar items de venta
-# ---------------------------
+# =========================
+# 📦 Sección de productos
+# =========================
 if "items_venta" not in st.session_state:
     st.session_state["items_venta"] = []
 
-# ---------------------------
-# Mostrar productos
-# ---------------------------
-st.subheader("📦 Productos")
 productos_data = productos.list_products()
-
-dtf_productos = pd.DataFrame(productos_data)
+st.subheader("📦 Productos disponibles")
 
 if productos_data:
-    for p in productos_data:
-        col1, col2, col3, col4 = st.columns([4, 2, 2, 2])
-        with col1:
-            st.text(p["nombre"])
-        with col2:
-            cantidad = st.number_input(
-                f"Cantidad {p['id']}",
-                min_value=0,
-                max_value=p["cantidad"],
-                value=0,
-                step=1,
-                key=f"cantidad_{p['id']}"
-            )
-        with col3:
-            precio = st.number_input(
-                f"Precio {p['id']}",
-                min_value=0.01,
-                value=float(p["precio"]),
-                step=0.01,
-                key=f"precio_{p['id']}"
-            )
-        with col4:
-            if st.button(f"➕ Añadir {p['nombre']}", key=f"add_{p['id']}"):
-                if cantidad > 0:
-                    existente = next((i for i in st.session_state["items_venta"] if i["id_producto"] == p["id"]), None)
-                    if existente:
-                        total_cantidad = existente["cantidad"] + cantidad
-                        if total_cantidad > p["cantidad"]:
-                            st.error(f"⚠️ Stock insuficiente ({p['cantidad']} disponible)")
-                        else:
-                            existente["cantidad"] = total_cantidad
-                            existente["precio_unitario"] = precio
-                            st.success(f"✅ Cantidad actualizada: {total_cantidad} x {p['nombre']}")
-                    else:
-                        st.session_state["items_venta"].append({
-                            "id_producto": p["id"],
-                            "nombre": p["nombre"],
-                            "cantidad": cantidad,
-                            "precio_unitario": precio
-                        })
-                        st.success(f"✅ {cantidad} x {p['nombre']} añadido(s) a la orden")
-# ---------------------------
-# Orden acumulada
-# ---------------------------
+    opciones = {
+        f"{p['nombre']} (Stock: {p['cantidad']}, ${p['precio']:.2f})": p
+        for p in productos_data
+    }
+
+    producto_nombre = st.selectbox(
+        "Selecciona un producto",
+        [""] + list(opciones.keys()),
+        key="select_producto_ventas"
+    )
+
+    if producto_nombre:
+        prod = opciones[producto_nombre]
+
+        cantidad = st.number_input(
+            "Cantidad",
+            min_value=1,
+            max_value=prod["cantidad"],
+            value=1,
+            key=f"cant_{prod['id']}"
+        )
+
+        precio = st.number_input(
+            "Precio unitario",
+            min_value=0.01,
+            value=float(prod["precio"]),
+            step=0.01,
+            key=f"precio_{prod['id']}"
+        )
+
+        if st.button(f"➕ Añadir {prod['nombre']}", key=f"add_{prod['id']}"):
+            existente = next((i for i in st.session_state["items_venta"] if i["id_producto"] == prod["id"]), None)
+            if existente:
+                total_cantidad = existente["cantidad"] + cantidad
+                if total_cantidad > prod["cantidad"]:
+                    st.error(f"Stock insuficiente ({prod['cantidad']} disponible)")
+                else:
+                    existente["cantidad"] = total_cantidad
+                    existente["precio_unitario"] = precio
+                    st.success(f"Cantidad de {prod['nombre']} actualizada ✅")
+            else:
+                st.session_state["items_venta"].append({
+                    "id_producto": prod["id"],
+                    "nombre": prod["nombre"],
+                    "cantidad": cantidad,
+                    "precio_unitario": precio
+                })
+                st.success(f"Producto {prod['nombre']} agregado ✅")
+else:
+    st.warning("No hay productos registrados en el inventario.")
+
+# =========================
+# 📝 Orden actual
+# =========================
 if st.session_state["items_venta"]:
     st.subheader("📝 Orden actual")
-    df_orden = pd.DataFrame(st.session_state["items_venta"])
-    df_orden["subtotal"] = df_orden["cantidad"] * df_orden["precio_unitario"]
+    df = pd.DataFrame(st.session_state["items_venta"])
+    df["subtotal"] = df["cantidad"] * df["precio_unitario"]
+    st.dataframe(df, use_container_width=True)
 
-    # Mostrar con formato
-    df_display = df_orden.copy()
-    df_display["precio_unitario"] = df_display["precio_unitario"].apply(lambda x: f"${x:,.2f}")
-    df_display["subtotal"] = df_display["subtotal"].apply(lambda x: f"${x:,.2f}")
-    st.dataframe(df_display, use_container_width=True)
-
-    # Total
-    total = df_orden["subtotal"].sum()
+    total = df["subtotal"].astype(float).sum()
     st.subheader(f"💰 Total: ${total:,.2f}")
 
-    # Registrar venta
     if cliente_id:
-        pago_estado = st.radio("Estado del pago", ["Pagado", "Pendiente"], key="pago_estado")
+        pago_estado = st.radio("Estado del pago", ["Pagado", "Pendiente"])
         tipo_pago = st.selectbox(
             "Método de pago",
             ["Efectivo", "Transferencia", "Tarjeta", "Otro"],
-            key="tipo_pago"
+            key="tipo_pago_venta"
         ) if pago_estado == "Pagado" else None
 
-        if st.button("💾 Registrar Venta", key="btn_registrar_venta"):
-            pagado = total if pago_estado == "Pagado" else 0.0
+        if st.button("💾 Registrar Venta", key="registrar_venta"):
             try:
-                nueva = ventas.register_sale(
+                # Convertir a JSON antes de guardar en la DB
+                items_json = json.dumps(st.session_state["items_venta"])
+
+                nueva_venta = ventas.register_sale(
                     cliente_id=cliente_id,
-                    items=st.session_state["items_venta"],
-                    pagado=pagado,
+                    items=st.session_state["items_venta"],  # lista de dicts
+                    pagado=float(total) if pago_estado == "Pagado" else 0.0,
                     tipo_pago=tipo_pago,
                     usuario=st.session_state["usuario"]["username"]
                 )
-                st.success(f"✅ Venta registrada: ID {nueva['id']} - Total ${nueva['total']:,.2f}")
-                if pagado < nueva['total']:
-                    st.warning(f"⚠️ Se generó una deuda pendiente de ${nueva['total'] - pagado:,.2f} para este cliente.")
+                st.success(f"Venta registrada: ID {nueva_venta['id']} - Total ${nueva_venta['total']:,.2f}")
                 st.session_state["items_venta"] = []
             except Exception as e:
-                st.error(f"❌ Error al registrar la venta: {str(e)}")
+                st.error(f"Error: {str(e)}")
