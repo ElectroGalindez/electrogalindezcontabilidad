@@ -1,0 +1,16 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.sqlite3
+
+# Entorno
+.env
+venv/
+.env.*
+
+# Datos locales
+data/
+*.db
+*.log

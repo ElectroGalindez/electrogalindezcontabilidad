@@ -31,8 +31,8 @@ def get_connection():
     """
     Devuelve una sesión de SQLAlchemy (context manager).
     Uso:
-       with engine.begin() as conn:  
-        conn.execute(...)
+       with get_connection() as session:  
+           session.execute(...)
     """
     session = SessionLocal()
     try:

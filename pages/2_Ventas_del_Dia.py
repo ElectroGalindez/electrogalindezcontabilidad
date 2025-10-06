@@ -68,12 +68,12 @@ df_ventas["Fecha_str"] = df_ventas["Fecha"].dt.date
 st.subheader("📋 Ventas del Rango Seleccionado")
 st.dataframe(df_ventas.sort_values(["Fecha", "ID Venta"]), use_container_width=True)
 
-# ---------------------------
-# Totales
-# ---------------------------
-total_ingresos = df_ventas["Subtotal"].sum()
-total_pagado = df_ventas["Pagado"].sum()
-total_deuda = df_ventas["Saldo Pendiente"].sum()
+# Agrupar por ID de venta para evitar duplicados
+ventas_unicas = df_ventas.groupby("ID Venta").first().reset_index()
+
+total_ingresos = df_ventas["Subtotal"].sum()  # suma de todos los subtotales por producto
+total_pagado = ventas_unicas["Pagado"].sum()  # suma correcta: una vez por venta
+total_deuda = ventas_unicas["Saldo Pendiente"].sum()  # suma correcta: una vez por venta
 
 st.metric("💰 Total Ingresos", f"${total_ingresos:,.2f}")
 st.metric("✅ Total Pagado", f"${total_pagado:,.2f}")

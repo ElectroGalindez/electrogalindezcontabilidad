@@ -147,3 +147,26 @@ def update_product(id_producto, nombre, cantidad, precio):
     """)
     with engine.begin() as conn:
         conn.execute(query, {"id": id_producto, "nombre": nombre, "cantidad": cantidad, "precio": precio})
+
+
+def eliminar_producto(id_producto: int, usuario: str = None):
+    """
+    Elimina un producto de la base de datos por su ID y registra la acción en logs.
+    """
+    query = text("""
+        DELETE FROM productos
+        WHERE id = :id_producto
+        RETURNING id, nombre
+    """)
+
+    with engine.connect() as conn:
+        with conn.begin():  # Maneja la transacción
+            result = conn.execute(query, {"id_producto": id_producto})
+            eliminado = result.mappings().fetchone()  # <-- Mapeo a dict
+
+            if eliminado:
+                # Registrar log si se proporciona usuario
+                if usuario:
+                    registrar_log(usuario, f"Eliminó producto {eliminado['nombre']} (ID {eliminado['id']})")
+                return dict(eliminado)  # Retornar como diccionario
+            return None
