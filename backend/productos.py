@@ -138,3 +138,12 @@ def adjust_stock(product_id: str, cantidad_delta: int, usuario=None) -> dict:
             registrar_log(usuario, "ajustar_stock", {"producto_id": product_id, "delta": cantidad_delta})
         
         return {**prod, "cantidad": nuevo_stock}
+    
+def update_product(id_producto, nombre, cantidad, precio):
+    query = text("""
+        UPDATE productos
+        SET nombre = :nombre, cantidad = :cantidad, precio = :precio
+        WHERE id = :id
+    """)
+    with engine.begin() as conn:
+        conn.execute(query, {"id": id_producto, "nombre": nombre, "cantidad": cantidad, "precio": precio})
