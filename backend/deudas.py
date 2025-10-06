@@ -1,135 +1,117 @@
+
 # backend/deudas.py
-from sqlalchemy import text
-from backend.db import engine
+"""
+Módulo para manejar deudas individuales.
+Funciones públicas:
+- list_debts()
+- add_debt(cliente_id, monto, fecha=None, estado='pendiente')
+- pay_debt(debt_id, monto_pago)  # registra pago parcial o total sobre una deuda
+- get_debt(debt_id)
+- debts_by_client(cliente_id)
+"""
 
-# =============================
-# Funciones de gestión de deudas
-# =============================
+from typing import List, Dict, Any
+from typing import Optional
+from .utils import read_json, write_json_atomic, generate_id, iso_today, validate_debt
+from .clientes import update_debt, get_client
 
-def list_debts():
-    """Devuelve todas las deudas."""
-    with engine.connect() as conn:
-        result = conn.execute(
-            text("SELECT id, cliente_id, monto_total, estado, fecha, usuario FROM deudas ORDER BY fecha")
-        )
-        deudas = [dict(row._mapping) for row in result]
-    return deudas
+FILENAME = "deudas.json"
 
-def debts_by_client(cliente_id):
-    """Devuelve las deudas pendientes de un cliente."""
-    with engine.connect() as conn:
-        result = conn.execute(
-            text("SELECT id, cliente_id, monto_total, estado, fecha, usuario FROM deudas "
-                 "WHERE cliente_id=:cid AND estado!='pagada' ORDER BY fecha"),
-            {"cid": cliente_id}
-        )
-        return [dict(row._mapping) for row in result]
+def list_debts() -> List[Dict[str, Any]]:
+    return read_json(FILENAME)
 
-def add_debt(cliente_id, productos, usuario=None):
+def get_debt(debt_id: str) -> Optional[Dict[str, Any]]:
+    for d in list_debts():
+        if d["id"] == debt_id:
+            return d
+    return None
+
+def add_debt(cliente_id: str, monto: float, fecha: Optional[str] = None, estado: str = "pendiente", usuario: Optional[str] = None) -> Dict[str, Any]:
+    deudas = list_debts()
+    if fecha is None:
+        fecha = iso_today()
+    debt_obj = {
+        "id": generate_id("D", deudas),
+        "cliente_id": cliente_id,
+        "monto": float(monto),
+        "estado": estado,
+        "fecha": fecha
+    }
+    if not validate_debt(debt_obj):
+        raise ValueError("Estructura de deuda inválida")
+    deudas.append(debt_obj)
+    write_json_atomic(FILENAME, deudas)
+    # actualizar deuda_total en clientes
+    update_debt(cliente_id, monto)
+    # Registrar log de creación de deuda
+    try:
+        from .logs import registrar_log
+        registrar_log(usuario or "sistema", "crear_deuda", {
+            "deuda_id": debt_obj["id"],
+            "cliente_id": cliente_id,
+            "monto": monto,
+            "estado": estado
+        })
+    except Exception:
+        pass
+    return debt_obj
+
+def pay_debt(debt_id: str, monto_pago: float, usuario: Optional[str] = None) -> Dict[str, Any]:
     """
-    Crea una nueva deuda asociada a productos.
-    Cada producto debe tener: id_producto, nombre, cantidad, precio_unitario, subtotal, saldo
+    Aplica monto de pago a una deuda específica.
+    - Si monto_pago >= monto => deuda marcada 'pagada' y monto ajustado a 0.
+    - Si pago parcial => se resta el monto y queda pendiente.
+    También actualiza deuda_total del cliente.
     """
-    if not productos:
-        raise ValueError("Debe proporcionar al menos un producto para generar deuda")
+    deudas = list_debts()
+    found = False
+    for d in deudas:
+        if d["id"] == debt_id:
+            found = True
+            saldo = float(d["monto"])
+            pago = float(monto_pago)
+            if pago >= saldo:
+                # pago total
+                d["monto"] = 0.0
+                d["estado"] = "pagada"
+                ajuste = -saldo
+            else:
+                d["monto"] = round(saldo - pago, 2)
+                d["estado"] = "pendiente"
+                ajuste = -pago
+            write_json_atomic(FILENAME, deudas)
+            # actualizar cliente
+            update_debt(d["cliente_id"], ajuste)
+            # Registrar log de pago de deuda
+            try:
+                from .logs import registrar_log
+                registrar_log(usuario or "sistema", "pago_deuda", {
+                    "deuda_id": d["id"],
+                    "cliente_id": d["cliente_id"],
+                    "monto_pago": monto_pago,
+                    "estado_final": d["estado"]
+                })
+            except Exception:
+                pass
+            return d
+    if not found:
+        raise KeyError(f"Deuda {debt_id} no encontrada")
 
-    # Generar ID tipo D001, D002...
-    deudas_existentes = list_debts()
-    next_id = f"D{len(deudas_existentes)+1:03d}"
-
-    monto_total = sum(float(p.get("saldo", p.get("subtotal", 0))) for p in productos)
-
-    # Guardar deuda
-    with engine.begin() as conn:
-        conn.execute(
-            text("INSERT INTO deudas (id, cliente_id, monto_total, estado, fecha, usuario) "
-                 "VALUES (:id, :cliente_id, :monto_total, :estado, :fecha, :usuario)"),
-            {
-                "id": next_id,
-                "cliente_id": cliente_id,
-                "monto_total": monto_total,
-                "estado": "pendiente",
-                "fecha": text("CURRENT_DATE"),  # fecha actual del servidor
-                "usuario": usuario or "sistema"
-            }
-        )
-
-        # Insertar detalle de productos vendidos en deuda_detalle
-        for p in productos:
-            conn.execute(
-                text("INSERT INTO deuda_detalle (deuda_id, id_producto, nombre, cantidad, precio_unitario, subtotal, saldo) "
-                     "VALUES (:deuda_id, :id_producto, :nombre, :cantidad, :precio_unitario, :subtotal, :saldo)"),
-                {
-                    "deuda_id": next_id,
-                    "id_producto": p.get("id_producto", ""),
-                    "nombre": p["nombre"],
-                    "cantidad": p["cantidad"],
-                    "precio_unitario": p["precio_unitario"],
-                    "subtotal": p["subtotal"],
-                    "saldo": p.get("saldo", p["subtotal"])
-                }
-            )
-
-    return get_debt(next_id)
-
-def get_debt(deuda_id):
-    """Obtiene la deuda por ID incluyendo detalle de productos."""
-    with engine.connect() as conn:
-        result = conn.execute(
-            text("SELECT id, cliente_id, monto_total, estado, fecha, usuario FROM deudas WHERE id=:id"),
-            {"id": deuda_id}
-        )
-        deuda = result.fetchone()
-        if not deuda:
-            return None
-        deuda_dict = dict(deuda._mapping)
-
-        detalle_result = conn.execute(
-            text("SELECT id_producto, nombre, cantidad, precio_unitario, subtotal, saldo "
-                 "FROM deuda_detalle WHERE deuda_id=:deuda_id"),
-            {"deuda_id": deuda_id}
-        )
-        deuda_dict["productos"] = [dict(r._mapping) for r in detalle_result]
-
-    return deuda_dict
-
-def pay_debt(deuda_id, monto):
-    """
-    Registra un pago sobre una deuda específica y actualiza los saldos por producto.
-    """
-    deuda = get_debt(deuda_id)
-    if not deuda:
-        raise KeyError(f"Deuda {deuda_id} no encontrada")
-
-    if deuda["estado"] == "pagada":
-        return deuda  # ya pagada
-
-    restante = monto
-
-    with engine.begin() as conn:
-        for prod in deuda["productos"]:
-            if restante <= 0:
-                break
-            saldo_actual = float(prod["saldo"])
-            abono = min(restante, saldo_actual)
-            nuevo_saldo = saldo_actual - abono
-            conn.execute(
-                text("UPDATE deuda_detalle SET saldo=:saldo WHERE deuda_id=:deuda_id AND id_producto=:id_producto"),
-                {"saldo": nuevo_saldo, "deuda_id": deuda_id, "id_producto": prod.get("id_producto", "")}
-            )
-            restante -= abono
-
-        # Actualizar monto_total y estado de la deuda
-        result = conn.execute(
-            text("SELECT SUM(saldo) as total_restante FROM deuda_detalle WHERE deuda_id=:deuda_id"),
-            {"deuda_id": deuda_id}
-        )
-        total_restante = result.fetchone()["total_restante"] or 0.0
-        estado = "pagada" if total_restante <= 0 else "pendiente"
-
-        conn.execute(
-            text("UPDATE deudas SET monto_total=:total, estado=:estado WHERE id=:deuda_id"),
-            {"total": total_restante, "estado": estado, "deuda_id": deuda_id}
-        )
-
-    return get_debt(deuda_id)
+def debts_by_client(cliente_id: str) -> List[Dict[str, Any]]:
+    return [d for d in list_debts() if d["cliente_id"] == cliente_id]
+# Eliminar deuda
+def delete_debt(debt_id: str, usuario: Optional[str] = None) -> bool:
+    deudas = list_debts()
+    deuda_eliminada = next((d for d in deudas if d["id"] == debt_id), None)
+    deudas = [d for d in deudas if d["id"] != debt_id]
+    write_json_atomic(FILENAME, deudas)
+    # Registrar log de eliminación de deuda
+    try:
+        from .logs import registrar_log
+        registrar_log(usuario or "sistema", "eliminar_deuda", {
+            "deuda_id": debt_id,
+            "deuda": deuda_eliminada
+        })
+    except Exception:
+        pass
+    return True

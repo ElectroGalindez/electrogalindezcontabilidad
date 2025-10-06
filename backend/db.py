@@ -1,10 +1,56 @@
-# backend/db.py
-import psycopg2
-from psycopg2.extras import RealDictCursor
 import os
+from sqlalchemy import create_engine, MetaData, text
+from sqlalchemy.orm import sessionmaker
+from dotenv import load_dotenv
+from contextlib import contextmanager
 
-# Reemplaza esta URL con la tuya de Neon
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://usuario:contraseña@host:puerto/dbname")
+# ---------------------------
+# Cargar .env
+# ---------------------------
+dotenv_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), ".env")
+load_dotenv(dotenv_path)
 
+DATABASE_URL = os.getenv("NEON_DATABASE_URL")
+if not DATABASE_URL:
+    raise ValueError("No se encontró NEON_DATABASE_URL en el archivo .env")
+
+# ---------------------------
+# Motor y sesión
+# ---------------------------
+engine = create_engine(DATABASE_URL, echo=False, future=True)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+# Objeto MetaData global
+metadata = MetaData()
+
+# ---------------------------
+# Context manager para conexión
+# ---------------------------
+@contextmanager
 def get_connection():
-    return psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
+    """
+    Devuelve una sesión de SQLAlchemy (context manager).
+    Uso:
+        with get_connection() as conn:
+            conn.execute(...)
+    """
+    session = SessionLocal()
+    try:
+        yield session
+        session.commit()
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        session.close()
+
+# ---------------------------
+# Función de prueba
+# ---------------------------
+def test_connection():
+    with engine.connect() as conn:
+        result = conn.execute(text("SELECT NOW()"))
+        print("Conexión exitosa ✅", result.scalar())
+
+if __name__ == "__main__":
+    test_connection()

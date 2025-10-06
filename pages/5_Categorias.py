@@ -1,75 +1,75 @@
-
 import streamlit as st
+import pandas as pd
 from backend import categorias
 
 st.set_page_config(page_title="Categorías", layout="wide")
 st.title("📂 Gestión de Categorías")
 
+# ---------------------------
+# Verificar sesión
+# ---------------------------
 if "usuario" not in st.session_state or st.session_state.usuario is None:
     st.warning("Debes iniciar sesión para acceder a esta página.")
     st.stop()
-    
-# =============================
-# 1. Cargar categorías
-# =============================
-lista_categorias = categorias.cargar_categorias()
 
-# =============================
-# 2. Agregar nueva categoría
-# =============================
-st.subheader("➕ Agregar categoría")
-with st.form("form_agregar"):
-    nueva_categoria = st.text_input("Nombre de la categoría")
-    submitted = st.form_submit_button("Agregar")
-    if submitted:
-        try:
-            categorias.agregar_categoria(nueva_categoria)
-            st.success(f"Categoría '{nueva_categoria}' agregada ✅")
-            st.rerun()
-        except ValueError as e:
-            st.error(str(e))
-
-st.divider()
-
-# =============================
-# 3. Editar o eliminar categorías existentes
-# =============================
-st.subheader("✏️ Editar / 🗑️ Eliminar Categorías")
-
+# ---------------------------
 # Cargar categorías
-lista_categorias = categorias.cargar_categorias()
+# ---------------------------
+lista_categorias = categorias.list_categories()
+df = pd.DataFrame(lista_categorias)
 
-if not lista_categorias:
-    st.info("No hay categorías registradas. Agrega nuevas categorías arriba.")
-else:
-    # Selector de categoría
-    seleccionada = st.selectbox("Selecciona una categoría para editar:", [""] + lista_categorias)
+# ---------------------------
+# Buscador
+# ---------------------------
+busqueda = st.text_input("🔍 Buscar por nombre o ID:")
+df_filtrado = df.copy()
+if busqueda:
+    mask = (
+        df_filtrado["nombre"].str.contains(busqueda, case=False, na=False) |
+        df_filtrado["id"].astype(str).str.contains(busqueda)
+    )
+    df_filtrado = df_filtrado[mask]
 
-    if seleccionada:
-        st.markdown("---")
-        st.write(f"**Editar categoría:** {seleccionada}")
+st.dataframe(df_filtrado, width='stretch')
 
-        # Formulario para editar/eliminar
-        with st.form(key=f"form_{seleccionada}"):
-            nuevo_nombre = st.text_input("Nuevo nombre:", value=seleccionada)
-            col1, col2 = st.columns(2)
-            
-            with col1:
-                guardar = st.form_submit_button("💾 Guardar")
-            with col2:
-                eliminar = st.form_submit_button("🗑️ Eliminar")
+# ---------------------------
+# Formulario Crear / Editar
+# ---------------------------
+st.markdown("### ✏️ Crear / Editar Categoría")
 
-            if guardar:
-                if nuevo_nombre.strip() == "":
-                    st.error("El nombre no puede estar vacío.")
-                elif nuevo_nombre in lista_categorias and nuevo_nombre != seleccionada:
-                    st.error(f"Ya existe la categoría '{nuevo_nombre}'.")
-                else:
-                    categorias.editar_categoria(seleccionada, nuevo_nombre)
-                    st.success(f"Categoría '{seleccionada}' renombrada a '{nuevo_nombre}' ✅")
-                    st.rerun()
+# Seleccionar categoría existente para editar
+opciones = [""] + [f"{c['nombre']} | ID:{c['id']}" for c in lista_categorias]
+seleccionado = st.selectbox("Selecciona una categoría para editar (opcional):", opciones, key="cat_select")
 
-            if eliminar:
-                categorias.eliminar_categoria(seleccionada)
-                st.warning(f"Categoría '{seleccionada}' eliminada ❌")
-                st.rerun()
+categoria_actual = None
+if seleccionado and seleccionado != "":
+    cat_id = int(seleccionado.split("ID:")[-1])
+    categoria_actual = categorias.get_category(cat_id)
+
+# Input para nombre
+nombre = st.text_input(
+    "Nombre de la categoría",
+    value=categoria_actual["nombre"] if categoria_actual else "",
+    key="cat_nombre"
+)
+
+# Botones
+col1, col2 = st.columns([1,1])
+
+# Guardar
+with col1:
+    if st.button("💾 Guardar Categoría"):
+        if categoria_actual:
+            categorias.editar_categoria(categoria_actual["id"], nombre)
+            st.success(f"Categoría '{nombre}' actualizada ✅")
+        else:
+            categorias.agregar_categoria(nombre)
+            st.success(f"Categoría '{nombre}' creada ✅")
+        st.experimental_rerun()
+
+# Eliminar
+with col2:
+    if categoria_actual and st.button("🗑️ Eliminar Categoría"):
+        categorias.eliminar_categoria(categoria_actual["id"])
+        st.warning(f"Categoría '{categoria_actual['nombre']}' eliminada ❌")
+        st.experimental_rerun()

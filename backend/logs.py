@@ -1,66 +1,45 @@
 # backend/logs.py
-from backend.db import engine
-from sqlalchemy import text
 from datetime import datetime
-
-ACCIONES_IMPORTANTES = {
-    "crear_usuario",
-    "editar_usuario",
-    "cambiar_password",
-    "desactivar_usuario",
-    "eliminar_usuario",
-    "crear_producto",
-    "editar_producto",
-    "eliminar_producto",
-    "registrar_venta",
-    "pago_deuda",
-    "enviar_alerta",
-    "restaurar_backup"
-}
+from typing import List, Dict, Any
+from sqlalchemy import text
+from .db import get_connection  # Función que devuelve conexión SQLAlchemy
 
 # ---------------------------
-# Registrar log
+# Registrar un log
 # ---------------------------
-def registrar_log(usuario, accion, detalles=None, nivel="INFO"):
-    if accion not in ACCIONES_IMPORTANTES and nivel != "CRITICAL":
-        return None
-
-    query = text("""
-        INSERT INTO logs (usuario, accion, detalles, fecha, nivel)
-        VALUES (:usuario, :accion, :detalles, :fecha, :nivel)
-    """)
-    with engine.begin() as conn:
-        conn.execute(query, {
-            "usuario": usuario,
-            "accion": accion,
-            "detalles": str(detalles or {}),
-            "fecha": datetime.now(),
-            "nivel": nivel
-        })
-    return True
-
-# ---------------------------
-# Registrar errores críticos
-# ---------------------------
-def registrar_error(usuario, mensaje, detalles=None):
-    return registrar_log(
-        usuario,
-        accion="ERROR",
-        detalles={"mensaje": mensaje, **(detalles or {})},
-        nivel="CRITICAL"
+def registrar_log(usuario: str, accion: str, detalles: Dict[str, Any] = None) -> Dict[str, Any]:
+    """
+    Inserta un registro de log en la base de datos.
+    """
+    conn = get_connection()
+    detalles = detalles or {}
+    fecha = datetime.now()
+    result = conn.execute(
+        text("""
+            INSERT INTO logs (usuario, accion, detalles, fecha)
+            VALUES (:usuario, :accion, :detalles::jsonb, :fecha)
+            RETURNING *
+        """),
+        {"usuario": usuario, "accion": accion, "detalles": json.dumps(detalles), "fecha": fecha}
     )
+    conn.commit()
+    return dict(result.fetchone())
 
 # ---------------------------
-# Consultas
+# Listar todos los logs
 # ---------------------------
-def listar_logs():
-    query = text("SELECT * FROM logs ORDER BY fecha DESC")
-    with engine.connect() as conn:
-        result = conn.execute(query)
-        return [dict(r) for r in result]
+def listar_logs() -> List[Dict[str, Any]]:
+    conn = get_connection()
+    result = conn.execute(text("SELECT * FROM logs ORDER BY fecha DESC"))
+    return [dict(row) for row in result.fetchall()]
 
-def obtener_logs_usuario(username):
-    query = text("SELECT * FROM logs WHERE usuario=:usuario ORDER BY fecha DESC")
-    with engine.connect() as conn:
-        result = conn.execute(query, {"usuario": username})
-        return [dict(r) for r in result]
+# ---------------------------
+# Obtener logs de un usuario específico
+# ---------------------------
+def obtener_logs_usuario(username: str) -> List[Dict[str, Any]]:
+    conn = get_connection()
+    result = conn.execute(
+        text("SELECT * FROM logs WHERE usuario = :usuario ORDER BY fecha DESC"),
+        {"usuario": username}
+    )
+    return [dict(row) for row in result.fetchall()]

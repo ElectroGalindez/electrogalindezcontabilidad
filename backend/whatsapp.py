@@ -1,42 +1,25 @@
-# ---------------------------
-# Alertas automáticas (WhatsApp / Logs)
-# ---------------------------
-import pandas as pd
-from backend import productos, deudas
-from backend.whatsapp import enviar_whatsapp
+# backend/whatsapp.py
+"""
+Módulo para enviar mensajes de WhatsApp usando Twilio API.
+"""
+from twilio.rest import Client
+import os
 
-def alertas_seguras():
+def enviar_whatsapp(mensaje, destinatario=None):
     """
-    Envía alertas de stock crítico y deudas vencidas.
-    Si Twilio no está configurado, solo registra el mensaje en consola y en logs.
+    Envía un mensaje de WhatsApp usando Twilio.
+    destinatario: número en formato internacional, ej: 'whatsapp:+549XXXXXXXXXX'
     """
-    try:
-        # Stock crítico
-        stock_critico = [p for p in productos.list_products() if p["cantidad"] <= 5]
-        if stock_critico:
-            mensaje_stock = f"⚠️ ALERTA: {len(stock_critico)} productos con stock crítico: " \
-                            + ", ".join(p["nombre"] for p in stock_critico)
-            try:
-                enviar_whatsapp(mensaje_stock)
-            except Exception as e:
-                print(f"[DEBUG] Mensaje WhatsApp pendiente: {mensaje_stock} (Error: {e})")
+    # Configuración desde variables de entorno o hardcodear para pruebas
+    account_sid = os.getenv('TWILIO_ACCOUNT_SID', 'TU_SID_AQUI')
+    auth_token = os.getenv('TWILIO_AUTH_TOKEN', 'TU_TOKEN_AQUI')
+    from_whatsapp = os.getenv('TWILIO_WHATSAPP_FROM', 'whatsapp:+14155238886')  # Twilio sandbox
+    to_whatsapp = destinatario or os.getenv('TWILIO_WHATSAPP_TO', 'whatsapp:+549XXXXXXXXXX')
 
-        # Deudas vencidas
-        deudas_vencidas = [
-            d for d in deudas.list_debts()
-            if d["estado"] == "pendiente"
-            and "vencimiento" in d
-            and pd.to_datetime(d["vencimiento"]) < pd.Timestamp.today()
-        ]
-        if deudas_vencidas:
-            mensaje_deudas = f"💳 ALERTA: {len(deudas_vencidas)} deudas vencidas de clientes."
-            try:
-                enviar_whatsapp(mensaje_deudas)
-            except Exception as e:
-                print(f"[DEBUG] Mensaje WhatsApp pendiente: {mensaje_deudas} (Error: {e})")
-
-    except Exception as e:
-        print(f"[ERROR] No se pudieron procesar las alertas: {e}")
-
-# Llamada segura
-alertas_seguras()
+    client = Client(account_sid, auth_token)
+    message = client.messages.create(
+        body=mensaje,
+        from_=from_whatsapp,
+        to=to_whatsapp
+    )
+    return message.sid

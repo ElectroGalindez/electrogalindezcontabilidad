@@ -1,0 +1,74 @@
+[
+    {
+        "usuario": "admin",
+        "accion": "ver_dashboard",
+        "detalles": "Accedió al dashboard principal",
+        "fecha": "2025-10-06T10:31:45.095543"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "productos.json",
+            "existe": false
+        },
+        "fecha": "2025-10-06T10:31:45.096334"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "clientes.json",
+            "existe": false
+        },
+        "fecha": "2025-10-06T10:31:45.096673"
+    },
+    {
+        "usuario": "admin",
+        "accion": "ver_dashboard",
+        "detalles": "Accedió al dashboard principal",
+        "fecha": "2025-10-06T10:31:50.273052"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "productos.json",
+            "existe": false
+        },
+        "fecha": "2025-10-06T10:31:50.273406"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "clientes.json",
+            "existe": false
+        },
+        "fecha": "2025-10-06T10:31:50.273594"
+    },
+    {
+        "usuario": "admin",
+        "accion": "ver_dashboard",
+        "detalles": "Accedió al dashboard principal",
+        "fecha": "2025-10-06T11:18:59.379625"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "productos.json",
+            "existe": false
+        },
+        "fecha": "2025-10-06T11:18:59.380090"
+    },
+    {
+        "usuario": "sistema",
+        "accion": "read_json",
+        "detalles": {
+            "archivo": "clientes.json",
+            "existe": false
+        },
+        "fecha": "2025-10-06T11:18:59.380361"
+    }
+]

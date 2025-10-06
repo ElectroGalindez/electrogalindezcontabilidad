@@ -1,121 +1,153 @@
 # backend/usuarios.py
-from sqlalchemy import text
-from backend.db import engine
-import uuid
-import bcrypt
+
 from datetime import datetime, timedelta
-
-def generar_id():
-    return str(uuid.uuid4())[:8]
+import bcrypt
+from backend.db import engine, text
+from .logs import registrar_log
 
 # =============================
-# CREAR USUARIO
+# Funciones de usuarios con SQLAlchemy
 # =============================
-def crear_usuario(username, password, rol="empleado"):
+
+# Crear usuario
+def crear_usuario(username, password, rol="empleado", actor=None):
     hashed = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
-    created_at = datetime.now()
-    usuario_id = generar_id()
-    with engine.begin() as conn:
-        conn.execute(
-            text(
-                "INSERT INTO usuarios (id, username, password, rol, activo, created_at, requiere_cambio_password, intentos_fallidos, bloqueado_hasta) "
-                "VALUES (:id, :username, :password, :rol, TRUE, :created_at, TRUE, 0, NULL)"
-            ),
-            {"id": usuario_id, "username": username, "password": hashed, "rol": rol, "created_at": created_at}
-        )
-    return get_usuario(username)
+    try:
+        with engine.connect() as conn:
+            conn.execute(
+                text("""
+                    INSERT INTO usuarios (username, password, rol)
+                    VALUES (:username, :password, :rol)
+                """),
+                {"username": username, "password": hashed, "rol": rol}
+            )
+        registrar_log(usuario=actor or username, accion="crear_usuario",
+                      detalles={"username": username, "rol": rol})
+        return {"username": username, "rol": rol}
+    except Exception as e:
+        raise ValueError("El usuario ya existe o hubo un error en la base de datos.") from e
 
-# =============================
-# OBTENER USUARIO
-# =============================
-def get_usuario(username):
+# Autenticar usuario
+def autenticar_usuario(username, password, max_intentos=5, bloqueo_min=15):
     with engine.connect() as conn:
-        result = conn.execute(
-            text("SELECT * FROM usuarios WHERE username = :username"),
+        row = conn.execute(
+            text("SELECT password, activo, intentos_fallidos, bloqueado_hasta, rol FROM usuarios WHERE username=:username"),
             {"username": username}
         ).fetchone()
-        return dict(result) if result else None
 
-# =============================
-# AUTENTICAR USUARIO
-# =============================
-def autenticar_usuario(username, password, max_intentos=5, bloqueo_min=15):
-    usuario = get_usuario(username)
-    if not usuario or not usuario["activo"]:
-        return None
+        if not row:
+            return None
 
-    # Verificar bloqueo
-    if usuario.get("bloqueado_hasta"):
-        bloqueado_hasta = usuario["bloqueado_hasta"]
-        if bloqueado_hasta > datetime.now():
+        hashed, activo, intentos, bloqueado_hasta, rol = row
+
+        if not activo:
+            return None
+
+        if bloqueado_hasta and bloqueado_hasta > datetime.now():
             return {"bloqueado": True, "bloqueado_hasta": bloqueado_hasta.isoformat()}
 
-    # Verificar contraseña
-    if bcrypt.checkpw(password.encode(), usuario["password"].encode()):
-        with engine.begin() as conn:
+        if bcrypt.checkpw(password.encode(), hashed.encode()):
             conn.execute(
-                text("UPDATE usuarios SET intentos_fallidos=0, bloqueado_hasta=NULL WHERE id=:id"),
-                {"id": usuario["id"]}
+                text("UPDATE usuarios SET intentos_fallidos=0, bloqueado_hasta=NULL WHERE username=:username"),
+                {"username": username}
             )
-        return usuario
-    else:
-        # Incrementar intentos fallidos
-        with engine.begin() as conn:
-            conn.execute(
-                text(
-                    "UPDATE usuarios SET intentos_fallidos = intentos_fallidos + 1 "
-                    "WHERE id = :id"
-                ),
-                {"id": usuario["id"]}
-            )
-        # Releer usuario
-        usuario = get_usuario(username)
-        if usuario["intentos_fallidos"] >= max_intentos:
-            bloqueado_hasta = datetime.now() + timedelta(minutes=bloqueo_min)
-            with engine.begin() as conn:
+            return {"username": username, "rol": rol}
+        else:
+            intentos = (intentos or 0) + 1
+            bloqueado = None
+            if intentos >= max_intentos:
+                bloqueado = datetime.now() + timedelta(minutes=bloqueo_min)
                 conn.execute(
-                    text("UPDATE usuarios SET bloqueado_hasta = :bloqueado_hasta WHERE id = :id"),
-                    {"bloqueado_hasta": bloqueado_hasta, "id": usuario["id"]}
+                    text("UPDATE usuarios SET intentos_fallidos=:intentos, bloqueado_hasta=:bloqueado WHERE username=:username"),
+                    {"intentos": intentos, "bloqueado": bloqueado, "username": username}
                 )
-            return {"bloqueado": True, "bloqueado_hasta": bloqueado_hasta.isoformat()}
-        return None
+                registrar_log(usuario=username, accion="bloqueo_usuario",
+                              detalles={"motivo": "demasiados intentos fallidos", "bloqueado_hasta": bloqueado.isoformat()})
+            else:
+                conn.execute(
+                    text("UPDATE usuarios SET intentos_fallidos=:intentos WHERE username=:username"),
+                    {"intentos": intentos, "username": username}
+                )
+            return None
 
-# =============================
-# CAMBIAR PASSWORD
-# =============================
-def cambiar_password(username, new_password):
+# Cambiar contraseña
+def cambiar_password(username, new_password, actor=None):
     hashed = bcrypt.hashpw(new_password.encode(), bcrypt.gensalt()).decode()
-    with engine.begin() as conn:
+    with engine.connect() as conn:
         conn.execute(
-            text(
-                "UPDATE usuarios SET password=:password, requiere_cambio_password=FALSE WHERE username=:username"
-            ),
+            text("UPDATE usuarios SET password=:password, requiere_cambio_password=FALSE WHERE username=:username"),
             {"password": hashed, "username": username}
         )
+    registrar_log(usuario=actor or username, accion="cambiar_password", detalles={"username": username})
     return True
 
-# =============================
-# LISTAR USUARIOS
-# =============================
+# Cambiar rol
+def cambiar_rol(username, nuevo_rol, actor=None):
+    old_rol = get_rol(username)
+    with engine.connect() as conn:
+        conn.execute(
+            text("UPDATE usuarios SET rol=:rol WHERE username=:username"),
+            {"rol": nuevo_rol, "username": username}
+        )
+    registrar_log(usuario=actor or username, accion="cambiar_rol",
+                  detalles={"username": username, "rol_anterior": old_rol, "rol_nuevo": nuevo_rol})
+    return True
+
+# Desactivar usuario
+def desactivar_usuario(username, actor=None):
+    with engine.connect() as conn:
+        conn.execute(
+            text("UPDATE usuarios SET activo=FALSE WHERE username=:username"),
+            {"username": username}
+        )
+    registrar_log(usuario=actor or username, accion="desactivar_usuario", detalles={"username": username})
+    return True
+# Activar usuario
+def activar_usuario(username, actor=None):
+    with engine.connect() as conn:
+        conn.execute(
+            text("UPDATE usuarios SET activo=TRUE WHERE username=:username"),
+            {"username": username}
+        )
+    registrar_log(usuario=actor or username, accion="activar_usuario", detalles={"username": username})
+    return True
+
+# Listar usuarios
 def listar_usuarios():
     with engine.connect() as conn:
-        result = conn.execute(text("SELECT * FROM usuarios ORDER BY username"))
-        return [dict(r) for r in result]
+        rows = conn.execute(
+            text("SELECT username, rol, activo, created_at, requiere_cambio_password FROM usuarios ORDER BY created_at")
+        ).fetchall()
+    usuarios = []
+    for r in rows:
+        usuarios.append({
+            "username": r[0],
+            "rol": r[1],
+            "activo": r[2],
+            "created_at": r[3].isoformat() if r[3] else None,
+            "requiere_cambio_password": r[4]
+        })
+    return usuarios
 
-# =============================
-# CAMBIAR ROL
-# =============================
-def cambiar_rol(username, nuevo_rol):
-    with engine.begin() as conn:
-        conn.execute(text("UPDATE usuarios SET rol=:rol WHERE username=:username"),
-                     {"rol": nuevo_rol, "username": username})
-    return True
+# Revisar si requiere cambio de contraseña
+def requiere_cambio_password(username):
+    with engine.connect() as conn:
+        row = conn.execute(
+            text("SELECT requiere_cambio_password FROM usuarios WHERE username=:username"),
+            {"username": username}
+        ).fetchone()
+    return row[0] if row else False
 
-# =============================
-# DESACTIVAR USUARIO
-# =============================
-def desactivar_usuario(username):
-    with engine.begin() as conn:
-        conn.execute(text("UPDATE usuarios SET activo=FALSE WHERE username=:username"),
-                     {"username": username})
-    return True
+# Obtener rol
+def get_rol(username):
+    with engine.connect() as conn:
+        row = conn.execute(
+            text("SELECT rol FROM usuarios WHERE username=:username"),
+            {"username": username}
+        ).fetchone()
+    return row[0] if row else None
+
+# Obtener logs de un usuario
+def obtener_logs_usuario(username):
+    from .logs import obtener_logs_usuario as fetch_logs
+    return fetch_logs(username)

@@ -1,16 +1,8 @@
-# backend/__init__.py
-# Exportar funciones comunes para facilidad de import
-from . import productos, clientes, ventas, deudas, utils, usuarios
-
-# Exportar funciones clave de usuarios
-from .usuarios import requiere_cambio_password
-
-__all__ = [
-	"productos",
-	"clientes",
-	"ventas",
-	"deudas",
-	"utils",
-	"usuarios",
-	"requiere_cambio_password"
-]
+# Permite importar módulos desde backend
+from .db import engine, MetaData
+from .usuarios import crear_usuario, autenticar_usuario, cambiar_password, requiere_cambio_password, activar_usuario, desactivar_usuario,  obtener_logs_usuario
+from .productos import list_products, get_product, agregar_producto, editar_producto, eliminar_producto
+from .clientes import list_clients, get_client, add_client, edit_client, delete_client, update_client
+from .ventas import list_sales, get_sale, delete_sale, register_sale
+from .deudas import list_debts, get_debt
+from .logs import registrar_log

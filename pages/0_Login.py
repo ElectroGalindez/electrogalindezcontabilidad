@@ -1,29 +1,42 @@
+# 0_Login.py
 import streamlit as st
 from backend.usuarios import autenticar_usuario
+from datetime import datetime
 
 st.set_page_config(page_title="Login | ElectroGalíndez", layout="centered")
-st.markdown("""
-<style>
-.titulo-login {font-size:2em; font-weight:bold; color:#2c3e50; margin-bottom:0.5em;}
-.stButton>button {background-color:#2980b9; color:white; font-weight:bold; border-radius:6px;}
-</style>
-""", unsafe_allow_html=True)
-st.markdown('<div class="titulo-login">🔒 Iniciar sesión</div>', unsafe_allow_html=True)
 
+# Inicializar sesión
 if "usuario" not in st.session_state:
     st.session_state.usuario = None
 
+# Usuario ya logueado
 if st.session_state.usuario:
-    st.success(f"Bienvenido, {st.session_state.usuario['username']} ({st.session_state.usuario['rol']})")
-    st.button("Cerrar sesión", on_click=lambda: st.session_state.update({"usuario": None}))
+    usuario = st.session_state.usuario
+    st.sidebar.write(f"👤 Usuario: {usuario['username']}")
+    st.sidebar.write(f"Rol: {usuario['rol']}")
+
+    st.success(f"Bienvenido, {usuario['username']} ({usuario['rol']})")
+    if st.button("Cerrar sesión"):
+        st.session_state.usuario = None
+        st.experimental_rerun()
+
+# Usuario no logueado
 else:
+    st.title("🔒 Iniciar sesión")
     username = st.text_input("Usuario")
     password = st.text_input("Contraseña", type="password")
+    
     if st.button("Ingresar"):
         user = autenticar_usuario(username, password)
-        if user:
+        if isinstance(user, dict) and user.get("bloqueado"):
+            try:
+                bloqueado_hasta = datetime.fromisoformat(user['bloqueado_hasta'])
+                st.error(f"Usuario bloqueado hasta {bloqueado_hasta.strftime('%Y-%m-%d %H:%M')}")
+            except:
+                st.error("Usuario bloqueado. Intenta más tarde.")
+        elif user:
             st.session_state.usuario = user
             st.success(f"Bienvenido, {user['username']} ({user['rol']})")
-            st.rerun()
+            st.experimental_rerun()
         else:
             st.error("Usuario o contraseña incorrectos")
