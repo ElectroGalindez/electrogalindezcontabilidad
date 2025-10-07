@@ -53,23 +53,39 @@ nombre = st.text_input(
     key="cat_nombre"
 )
 
-# Botones
+# ---------------------------
+# Botones Guardar / Eliminar
+# ---------------------------
 col1, col2 = st.columns([1,1])
 
 # Guardar
 with col1:
     if st.button("💾 Guardar Categoría"):
-        if categoria_actual:
-            categorias.editar_categoria(categoria_actual["id"], nombre)
-            st.success(f"Categoría '{nombre}' actualizada ✅")
-        else:
-            categorias.agregar_categoria(nombre)
-            st.success(f"Categoría '{nombre}' creada ✅")
-        st.experimental_rerun()
+        try:
+            if categoria_actual:
+                categorias.editar_categoria(categoria_actual["id"], nombre, usuario=st.session_state["usuario"]["username"])
+                st.success(f"Categoría '{nombre}' actualizada ✅")
+            else:
+                categorias.agregar_categoria(nombre, usuario=st.session_state["usuario"]["username"])
+                st.success(f"Categoría '{nombre}' creada ✅")
+            # Actualizar lista y recargar
+            st.session_state["recargar"] = True
+        except Exception as e:
+            st.error(f"Error: {e}")
 
 # Eliminar
 with col2:
     if categoria_actual and st.button("🗑️ Eliminar Categoría"):
-        categorias.eliminar_categoria(categoria_actual["id"])
-        st.warning(f"Categoría '{categoria_actual['nombre']}' eliminada ❌")
-        st.experimental_rerun()
+        try:
+            categorias.eliminar_categoria(categoria_actual["id"], usuario=st.session_state["usuario"]["username"])
+            st.warning(f"Categoría '{categoria_actual['nombre']}' eliminada ❌")
+            st.session_state["recargar"] = True
+        except Exception as e:
+            st.error(f"Error: {e}")
+
+# ---------------------------
+# Recargar la página si hubo cambios
+# ---------------------------
+if st.session_state.get("recargar"):
+    st.session_state["recargar"] = False
+    st.experimental_rerun()
