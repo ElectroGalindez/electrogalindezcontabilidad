@@ -75,6 +75,8 @@ with col1:
             st.error(f"Error: {e}")
 
 # Eliminar
+from backend import productos
+
 with col2:
     if categoria_actual and st.button("🗑️ Eliminar Categoría"):
         try:
@@ -89,7 +91,7 @@ with col2:
                     usuario=st.session_state["usuario"]["username"]
                 )
                 st.success(f"Categoría '{categoria_actual['nombre']}' eliminada ✅")
-                st.session_state["recargar"] = True
+                st.experimental_rerun()
         except Exception as e:
             st.error(f"Error: {e}")
 
