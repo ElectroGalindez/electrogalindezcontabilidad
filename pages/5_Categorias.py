@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
-from backend import categorias
-from backend import productos
+from backend import categorias, productos
 
 st.set_page_config(page_title="Categorías", layout="wide")
 st.title("📂 Gestión de Categorías")

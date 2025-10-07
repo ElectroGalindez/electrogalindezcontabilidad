@@ -5,5 +5,5 @@ from .productos import list_products, get_product, guardar_producto , adjust_sto
 from .clientes import list_clients, get_client, add_client, edit_client, delete_client, update_client
 from .ventas import list_sales, get_sale, delete_sale, register_sale
 from .deudas import list_debts, get_debt, add_debt, update_debt, debts_by_client, delete_debt
-from .categorias import list_categories, get_category, agregar_categoria, editar_categoria, eliminar_categoria,list_products_by_category
+from .categorias import list_categories, get_category, agregar_categoria, editar_categoria, eliminar_categoria
 from .logs import registrar_log
