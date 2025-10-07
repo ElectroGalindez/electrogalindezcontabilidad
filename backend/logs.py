@@ -27,17 +27,20 @@ def registrar_log(usuario, accion, detalles=None):
 # Listar todos los logs
 # ---------------------------
 def listar_logs() -> List[Dict[str, Any]]:
-    conn = get_connection()
-    result = conn.execute(text("SELECT * FROM logs ORDER BY fecha DESC"))
-    return [dict(row) for row in result.fetchall()]
+    with engine.connect() as conn:
+        result = conn.execute(text("SELECT * FROM logs ORDER BY fecha DESC"))
+        return [dict(row) for row in result.fetchall()]
 
-# ---------------------------
-# Obtener logs de un usuario específico
-# ---------------------------
-def obtener_logs_usuario(username: str) -> List[Dict[str, Any]]:
-    conn = get_connection()
-    result = conn.execute(
-        text("SELECT * FROM logs WHERE usuario = :usuario ORDER BY fecha DESC"),
-        {"usuario": username}
-    )
-    return [dict(row) for row in result.fetchall()]
+
+def obtener_logs_usuario(username: str):
+    """Devuelve los registros del historial de acciones de un usuario."""
+    query = text("""
+        SELECT usuario, accion, fecha, detalles
+        FROM logs
+        WHERE usuario = :usuario
+        ORDER BY fecha DESC
+        LIMIT 100
+    """)
+    with engine.connect() as conn:
+        result = conn.execute(query, {"usuario": username})
+        return [row._asdict() for row in result]
