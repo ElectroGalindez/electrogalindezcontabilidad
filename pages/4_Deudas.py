@@ -124,14 +124,14 @@ if deudas_pendientes:
                         f"✅ Pago registrado correctamente. "
                         f"Estado final: {estado_final} | Restante: ${restante:,.2f}"
                     )
-                    st.status()
+                    st.experimental_rerun()
             except Exception as e:
                 st.error(f"Error al registrar pago: {str(e)}")
 
     with col2:
         if st.button("🧹 Vaciar selección"):
             st.session_state.pop("deuda_sel", None)
-            st.status()
+            st.experimental_rerun()
 
 else:
     st.info("No hay deudas pendientes para este cliente.")

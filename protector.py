@@ -31,7 +31,7 @@ def proteger_pagina(inactividad_minutos: int = DEFAULT_INACTIVIDAD_MINUTOS):
     if st.session_state.usuario and (time.time() - st.session_state._last_interaction > INACTIVIDAD_SEGUNDOS):
         st.session_state.usuario = None
         st.warning(f"⚠️ Sesión cerrada por inactividad ({inactividad_minutos} min).")
-        st.status()
+        st.experimental_rerun()
 
     # ---------------------------
     # Redirigir al login si no hay usuario

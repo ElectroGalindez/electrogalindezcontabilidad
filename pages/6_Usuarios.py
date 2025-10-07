@@ -63,7 +63,7 @@ if usuarios_filtrados:
                     elif nuevo_estado == "Inactivo" and u["activo"]:
                         desactivar_usuario(u["username"], actor=st.session_state.usuario["username"])
                     st.success("Cambios guardados")
-                    st.status()
+                    st.experimental_rerun()
 
             # Ver historial de acciones
             if st.button("📜 Ver historial de acciones", key=f"log_{u['username']}"):
@@ -94,7 +94,7 @@ with st.form("form_nuevo_usuario"):
             try:
                 crear_usuario(nuevo_user, nuevo_pass, nuevo_rol, actor=st.session_state.usuario["username"])
                 st.success(f"Usuario '{nuevo_user}' creado ✅")
-                st.status()
+                st.experimental_rerun()
             except Exception as e:
                 st.error(str(e))
 
@@ -114,6 +114,6 @@ if usernames:
         else:
             cambiar_password(seleccionado, new_pass, actor=st.session_state.usuario["username"])
             st.success("Contraseña actualizada ✅")
-            st.status()
+            st.experimental_rerun()
 else:
     st.info("No hay usuarios activos para modificar.")

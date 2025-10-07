@@ -60,7 +60,7 @@ with st.form("crear_categoria"):
         if nuevo_nombre.strip():
             categorias.agregar_categoria(nuevo_nombre.strip(), usuario="admin")
             st.success(f"Categoría '{nuevo_nombre}' creada correctamente ✅")
-            st.status()
+            st.experimental_rerun()
         else:
             st.warning("El nombre no puede estar vacío.")
 
@@ -73,7 +73,7 @@ if categoria_actual:
             if nuevo_nombre.strip():
                 categorias.editar_categoria(categoria_actual["id"], nuevo_nombre.strip(), usuario="admin")
                 st.success(f"Categoría actualizada a '{nuevo_nombre}' ✅")
-                st.status()
+                st.experimental_rerun()
             else:
                 st.warning("El nombre no puede estar vacío.")
 

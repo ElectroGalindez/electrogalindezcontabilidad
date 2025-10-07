@@ -56,12 +56,12 @@ if clientes_filtrados:
                         chapa=chapa
                     )
                     st.success("✅ Cliente actualizado")
-                    st.status()
+                    st.experimental_rerun()
             with col7:
                 if st.button("🗑 Eliminar cliente", key=f"del_{c['id']}"):
                     delete_client(c["id"])
                     st.success("❌ Cliente eliminado")
-                    st.status()
+                    st.experimental_rerun()
 else:
     st.info("No hay clientes que coincidan con los filtros.")
 
@@ -90,4 +90,4 @@ with st.form("form_nuevo_cliente", clear_on_submit=True):
                 chapa=chapa_nueva
             )
             st.success(f"✅ Cliente '{nombre_nuevo}' creado")
-            st.status()
+            st.experimental_rerun()
