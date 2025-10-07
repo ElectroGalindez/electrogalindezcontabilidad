@@ -53,7 +53,7 @@ def add_debt(
     estado: str = "pendiente",
     usuario: str = None,
     productos: list = None,
-    monto_total: float = 0.0
+    monto: float = 0.0  # 🔹 debe llamarse "monto" para coincidir con la tabla
 ):
     """
     Crea un registro de deuda y sus detalles por producto en la base de datos.
@@ -66,14 +66,14 @@ def add_debt(
     # Insertar deuda principal
     query_deuda = text("""
         INSERT INTO deudas (cliente_id, venta_id, monto, estado, fecha, descripcion, productos)
-        VALUES (:cliente_id, :venta_id, :monto_total, :estado, :fecha, :descripcion, :productos)
+        VALUES (:cliente_id, :venta_id, :monto, :estado, :fecha, :descripcion, :productos)
         RETURNING id
     """)
     with engine.begin() as conn:
         result = conn.execute(query_deuda, {
             "cliente_id": cliente_id,
             "venta_id": venta_id,
-            "monto": monto_total,
+            "monto": monto,
             "estado": estado,
             "fecha": fecha,
             "descripcion": f"Deuda generada por venta {venta_id or 'N/A'}",

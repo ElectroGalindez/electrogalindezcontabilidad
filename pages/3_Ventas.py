@@ -123,20 +123,20 @@ else:
 # =========================
 # 📝 Orden actual
 # =========================
-# =========================
-# 📝 Orden actual
-# =========================
-if st.session_state["items_venta"]:
+if st.session_state.get("items_venta"):
     st.subheader("📝 Orden actual")
     df = pd.DataFrame(st.session_state["items_venta"])
     df["subtotal"] = df["cantidad"] * df["precio_unitario"]
     df_resumen = df[["id_producto", "nombre", "cantidad", "precio_unitario", "subtotal"]]
-    st.dataframe(df_resumen, use_container_width=True)
+    
+    # Mostrar la tabla de manera compatible con la nueva versión de Streamlit
+    st.dataframe(df_resumen, width='stretch')
 
     total = df["subtotal"].astype(float).sum()
     st.subheader(f"💰 Total: ${total:,.2f}")
 
     col_a, col_b = st.columns([1, 1])
+
     with col_a:
         if st.button("🗑️ Vaciar orden", key="vaciar_orden"):
             st.session_state["items_venta"] = []
@@ -145,11 +145,13 @@ if st.session_state["items_venta"]:
 
     if cliente_id:
         pago_estado = st.radio("Estado del pago", ["Pagado", "Pendiente"])
-        tipo_pago = st.selectbox(
-            "Método de pago",
-            ["Efectivo", "Transferencia", "Tarjeta", "Otro"],
-            key="tipo_pago_venta"
-        ) if pago_estado == "Pagado" else "Pendiente"
+        tipo_pago = (
+            st.selectbox(
+                "Método de pago",
+                ["Efectivo", "Transferencia", "Tarjeta", "Otro"],
+                key="tipo_pago_venta"
+            ) if pago_estado == "Pagado" else "Pendiente"
+        )
 
         with col_b:
             if st.button("💾 Registrar Venta", key="registrar_venta"):
@@ -167,22 +169,25 @@ if st.session_state["items_venta"]:
                         tipo_pago=tipo_pago
                     )
 
-                    # Si el pago está pendiente, crear deuda asociada a los productos
+                    # Crear deuda solo si el pago es pendiente
                     if pago_estado == "Pendiente":
                         from backend.deudas import add_debt
                         saldo_pendiente = float(total) - monto_pagado
-                        add_debt(
+                        deuda_id = add_debt(
                             cliente_id=cliente_id,
-                            monto_total=saldo_pendiente,  # ✅ correcto
+                            monto=saldo_pendiente,  # 🔹 ahora coincide con la función
                             venta_id=nueva_venta["id"],
                             productos=st.session_state["items_venta"],
                             usuario=st.session_state["usuario"]["username"],
                             estado="pendiente"
                         )
+                        st.info(f"Deuda creada con ID {deuda_id} por ${saldo_pendiente:,.2f}")
+                        
                     st.success(f"Venta registrada ✅ ID {nueva_venta['id']} - Total ${nueva_venta['total']:,.2f}")
 
                     # Limpiar carrito
                     st.session_state["items_venta"] = []
                     st.rerun()
 
-                except Exception :
+                except Exception as e:
+                    st.error(f"Error al registrar la venta: {str(e)}")
