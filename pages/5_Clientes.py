@@ -1,9 +1,9 @@
 import streamlit as st
+import pandas as pd
 from backend.clientes import list_clients, add_client, update_client, delete_client
 
 st.set_page_config(page_title="Gestión de Clientes", layout="wide")
 st.title("👥 Gestión de Clientes")
-st.caption("Administra los clientes del sistema.")
 
 # ---------------------------
 # Verificar sesión
@@ -12,56 +12,72 @@ if "usuario" not in st.session_state or st.session_state.usuario is None:
     st.warning("Debes iniciar sesión para acceder a esta página.")
     st.stop()
 
-# ---------------------------
-# Lista de clientes con filtros
-# ---------------------------
-clientes_data = list_clients()
+usuario_actual = st.session_state.usuario["username"]
 
-st.subheader("🔎 Buscar y filtrar clientes")
+# ---------------------------
+# Cache de clientes con TTL (10s)
+# ---------------------------
+@st.cache_data(ttl=10)
+def cached_clients():
+    return list_clients()
+
+clientes_data = cached_clients()
+
+# ---------------------------
+# Filtros por nombre o id
+# ---------------------------
 col1, col2 = st.columns(2)
 with col1:
-    filtro_nombre = st.text_input("Buscar por nombre")
+    filtro_nombre = st.text_input("Filtrar por nombre", key="filtro_nombre")
 with col2:
-    filtro_ci = st.text_input("Buscar por CI")
+    filtro_id = st.text_input("Filtrar por ID", key="filtro_id")
 
-clientes_filtrados = [
-    c for c in clientes_data
-    if (filtro_nombre.lower() in c["nombre"].lower()) and (filtro_ci in c.get("ci", ""))
-]
+# Filtrado seguro: si no hay filtro, se muestran todos
+def filter_clients(c):
+    match_nombre = filtro_nombre.lower() in str(c["nombre"]).lower() if filtro_nombre else True
+    match_id = filtro_id in str(c["id"]) if filtro_id else True
+    return match_nombre and match_id
 
+clientes_filtrados = [c for c in clientes_data if filter_clients(c)]
+
+# ---------------------------
+# Tabla editable de clientes
+# ---------------------------
 st.subheader("Clientes registrados")
 if clientes_filtrados:
-    for c in clientes_filtrados:
-        with st.expander(f"{c['nombre']} ({c.get('ci', '')})", expanded=False):
-            col1, col2, col3, col4, col5 = st.columns([2, 3, 2, 2, 2])
-            with col1:
-                nombre = st.text_input("Nombre", value=c["nombre"], key=f"nombre_{c['id']}")
-            with col2:
-                direccion = st.text_input("Dirección", value=c.get("direccion",""), key=f"direccion_{c['id']}")
-            with col3:
-                telefono = st.text_input("Teléfono", value=c.get("telefono",""), key=f"telefono_{c['id']}")
-            with col4:
-                ci = st.text_input("CI", value=c.get("ci",""), key=f"ci_{c['id']}")
-            with col5:
-                chapa = st.text_input("Chapa", value=c.get("chapa",""), key=f"chapa_{c['id']}")
-            col6, col7 = st.columns(2)
-            with col6:
-                if st.button("💾 Guardar cambios", key=f"save_{c['id']}"):
-                    update_client(
-                        c["id"],
-                        nombre=nombre,
-                        direccion=direccion,
-                        telefono=telefono,
-                        ci=ci,
-                        chapa=chapa
-                    )
-                    st.success("✅ Cliente actualizado")
-                    st.experimental_rerun()
-            with col7:
-                if st.button("🗑 Eliminar cliente", key=f"del_{c['id']}"):
-                    delete_client(c["id"])
-                    st.success("❌ Cliente eliminado")
-                    st.experimental_rerun()
+    df = pd.DataFrame(clientes_filtrados)
+    edited_df = st.data_editor(
+        df,
+        num_rows="dynamic",
+        use_container_width=True,
+        column_config={
+            "id": st.column_config.NumberColumn("ID", disabled=True),
+            "nombre": st.column_config.TextColumn("Nombre"),
+            "direccion": st.column_config.TextColumn("Dirección"),
+            "telefono": st.column_config.TextColumn("Teléfono"),
+            "ci": st.column_config.TextColumn("CI"),
+            "chapa": st.column_config.TextColumn("Chapa"),
+            "deuda_total": st.column_config.NumberColumn("Deuda Total", disabled=True)
+        }
+    )
+
+    # Guardar cambios
+    if st.button("💾 Guardar cambios"):
+        for _, row in edited_df.iterrows():
+            update_client(
+                row["id"],
+                nombre=row["nombre"],
+                direccion=row.get("direccion",""),
+                telefono=row.get("telefono",""),
+                ci=row.get("ci",""),
+                chapa=row.get("chapa",""),
+                usuario=usuario_actual
+            )
+        st.success("✅ Clientes actualizados")
+        # Limpiar cache para que se vea reflejado inmediatamente
+        if "cached_clients" in st.session_state:
+            del st.session_state["cached_clients"]
+        st.experimental_rerun()
 else:
     st.info("No hay clientes que coincidan con los filtros.")
 
@@ -72,22 +88,58 @@ st.divider()
 # ---------------------------
 st.subheader("➕ Crear nuevo cliente")
 with st.form("form_nuevo_cliente", clear_on_submit=True):
-    nombre_nuevo = st.text_input("Nombre *")
-    direccion_nueva = st.text_input("Dirección")
-    telefono_nuevo = st.text_input("Teléfono")
-    ci_nuevo = st.text_input("CI")
-    chapa_nueva = st.text_input("Chapa")
+    nombre_nuevo = st.text_input("Nombre *", key="nombre_nuevo")
+    direccion_nueva = st.text_input("Dirección", key="direccion_nueva")
+    telefono_nuevo = st.text_input("Teléfono", key="telefono_nuevo")
+    ci_nuevo = st.text_input("CI", key="ci_nuevo")
+    chapa_nueva = st.text_input("Chapa", key="chapa_nueva")
     submitted = st.form_submit_button("Crear cliente")
+
     if submitted:
         if not nombre_nuevo.strip():
             st.error("❌ El nombre no puede estar vacío.")
         else:
-            add_client(
-                nombre=nombre_nuevo,
-                direccion=direccion_nueva,
-                telefono=telefono_nuevo,
-                ci=ci_nuevo,
-                chapa=chapa_nueva
-            )
-            st.success(f"✅ Cliente '{nombre_nuevo}' creado")
+            try:
+                cliente = add_client(
+                    nombre=nombre_nuevo,
+                    telefono=telefono_nuevo,
+                    ci=ci_nuevo,
+                    chapa=chapa_nueva,
+                    direccion=direccion_nueva
+                )
+                if cliente:
+                    st.success(f"✅ Cliente '{cliente['nombre']}' creado con ID {cliente['id']}")
+                    # Limpiar cache para mostrarlo inmediatamente
+                    if "cached_clients" in st.session_state:
+                        del st.session_state["cached_clients"]
+                    st.experimental_rerun()
+                else:
+                    st.error("❌ No se pudo crear el cliente.")
+            except Exception as e:
+                st.error(f"❌ Error al crear cliente: {str(e)}")
+
+# ---------------------------
+# Eliminar cliente con selector
+# ---------------------------
+st.subheader("🗑 Eliminar cliente")
+
+# Crear opciones con "ID - Nombre"
+opciones_clientes = [f"{c['id']} - {c['nombre']}" for c in clientes_data]
+
+if opciones_clientes:
+    cliente_seleccionado = st.selectbox("Seleccionar cliente a eliminar", opciones_clientes, key="cliente_a_eliminar")
+    # Extraer el ID del string seleccionado
+    id_eliminar = cliente_seleccionado.split(" - ")[0]
+
+    if st.button("Eliminar cliente"):
+        try:
+            delete_client(id_eliminar, usuario=usuario_actual)
+            st.success(f"❌ Cliente con ID {id_eliminar} eliminado")
+            # Limpiar cache para refrescar inmediatamente
+            if "cached_clients" in st.session_state:
+                del st.session_state["cached_clients"]
             st.experimental_rerun()
+        except Exception as e:
+            st.error(f"❌ Error al eliminar cliente: {str(e)}")
+else:
+    st.info("No hay clientes para eliminar.")

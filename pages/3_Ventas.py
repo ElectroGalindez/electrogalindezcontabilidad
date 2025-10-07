@@ -4,6 +4,7 @@ from datetime import datetime
 import json
 from backend import productos, clientes, ventas
 from backend.deudas import add_debt 
+from backend.clientes import add_client
 
 
 st.set_page_config(page_title="Ventas", layout="wide")
@@ -35,29 +36,31 @@ if clientes_dict:
     if cliente_nombre:
         cliente_id = clientes_dict[cliente_nombre]
 
+
+# ---------------------------
 # Crear nuevo cliente
-with st.expander("➕ Agregar nuevo cliente"):
-    with st.form("form_nuevo_cliente", clear_on_submit=True):
-        nombre_nuevo = st.text_input("Nombre del cliente")
-        telefono_nuevo = st.text_input("Teléfono")
-        ci_nuevo = st.text_input("C.I.")
-        chapa_nueva = st.text_input("Chapa")
-        direccion_nueva = st.text_input("Dirección")
-        submitted = st.form_submit_button("Guardar Cliente")
-        if submitted:
-            if nombre_nuevo.strip() == "":
-                st.error("❌ El nombre no puede estar vacío.")
-            else:
-                nuevo_cliente = clientes.add_client(
-                    nombre=nombre_nuevo,
-                    telefono=telefono_nuevo,
-                    ci=ci_nuevo,
-                    chapa=chapa_nueva,
-                    direccion=direccion_nueva,
-                    usuario=st.session_state["usuario"]["username"]
-                )
-                st.success(f"✅ Cliente agregado: {nuevo_cliente['nombre']}")
-                cliente_id = nuevo_cliente["id"]
+# ---------------------------
+st.subheader("➕ Crear nuevo cliente")
+with st.form("form_nuevo_cliente", clear_on_submit=True):
+    nombre_nuevo = st.text_input("Nombre *")
+    direccion_nueva = st.text_input("Dirección")
+    telefono_nuevo = st.text_input("Teléfono")
+    ci_nuevo = st.text_input("CI")
+    chapa_nueva = st.text_input("Chapa")
+    submitted = st.form_submit_button("Crear cliente")
+    if submitted:
+        if not nombre_nuevo.strip():
+            st.error("❌ El nombre no puede estar vacío.")
+        else:
+            add_client(
+                nombre=nombre_nuevo,
+                direccion=direccion_nueva,
+                telefono=telefono_nuevo,
+                ci=ci_nuevo,
+                chapa=chapa_nueva
+            )
+            st.success(f"✅ Cliente '{nombre_nuevo}' creado")
+            st.experimental_rerun()
 
 # =========================
 # 📦 Sección de productos

@@ -8,50 +8,62 @@ from .logs import registrar_log
 from .deudas import add_debt
 import json
 
+# ------------------------------
+# Registrar venta
 # ----------------------------
-# Funciones de ventas
-# ----------------------------
-
-
 def register_sale(cliente_id, total, pagado, usuario, tipo_pago, productos=None):
     """
-    Registra una venta en la base de datos, opcionalmente con los productos.
+    Registra una venta y descuenta del inventario correctamente.
     """
-    # Guardar venta
-    query = text("""
-        INSERT INTO ventas (cliente_id, total, pagado, usuario, tipo_pago, fecha)
-        VALUES (:cliente_id, :total, :pagado, :usuario, :tipo_pago, :fecha)
-        RETURNING id
-    """)
     fecha = datetime.now()
     with engine.begin() as conn:
-        result = conn.execute(query, {
+        # Guardar venta
+        query_venta = text("""
+            INSERT INTO ventas (cliente_id, total, pagado, usuario, tipo_pago, fecha)
+            VALUES (:cliente_id, :total, :pagado, :usuario, :tipo_pago, :fecha)
+            RETURNING id
+        """)
+        venta_id = conn.execute(query_venta, {
             "cliente_id": cliente_id,
             "total": total,
             "pagado": pagado,
             "usuario": usuario,
             "tipo_pago": tipo_pago,
             "fecha": fecha
-        })
-        venta_id = result.scalar()
-        
-        # Guardar productos si se pasó la lista
+        }).scalar()
+
+        # Guardar detalle de productos y actualizar inventario
         if productos:
             for item in productos:
+                prod_id = item.get("id_producto") or item.get("id")
+                cantidad_vendida = float(item.get("cantidad", 0))
+                precio_unitario = float(item.get("precio_unitario", 0.0))
+
+                # Insertar detalle
                 conn.execute(text("""
                     INSERT INTO ventas_detalle (venta_id, producto_id, cantidad, precio_unitario)
                     VALUES (:venta_id, :producto_id, :cantidad, :precio_unitario)
                 """), {
                     "venta_id": venta_id,
-                    "producto_id": item.get("id_producto"),
-                    "cantidad": item.get("cantidad"),
-                    "precio_unitario": item.get("precio_unitario")
+                    "producto_id": prod_id,
+                    "cantidad": cantidad_vendida,
+                    "precio_unitario": precio_unitario
                 })
-    return {"id": venta_id, "total": total}
 
-# =========================
+                # Actualizar stock
+                producto = get_product(prod_id)
+                if producto:
+                    stock_actual = float(producto.get("cantidad", 0))
+                    nuevo_stock = max(stock_actual - cantidad_vendida, 0)
+                    update_product(prod_id, nombre=producto["nombre"], cantidad=nuevo_stock, precio=producto["precio"])
+
+        registrar_log(usuario, "registrar_venta", {"venta_id": venta_id, "total": total, "pagado": pagado})
+
+    return {"id": venta_id, "total": total, "pagado": pagado, "fecha": fecha, "productos_vendidos": productos or []}
+
+# ----------------------------
 # Listar ventas
-# =========================
+# ----------------------------
 def list_sales():
     """
     Devuelve todas las ventas de la base de datos con productos_vendidos como lista de dicts.
@@ -62,13 +74,13 @@ def list_sales():
 
     ventas_list = []
     for r_dict in resultados:
-        # Decodificar JSON de productos vendidos
-        productos_vendidos = r_dict["productos_vendidos"]
+        productos_vendidos = r_dict.get("productos_vendidos") or "[]"
         if isinstance(productos_vendidos, str):
             try:
                 productos_vendidos = json.loads(productos_vendidos)
             except json.JSONDecodeError:
                 productos_vendidos = []
+
         r_dict = dict(r_dict)
         r_dict["productos_vendidos"] = productos_vendidos
         ventas_list.append(r_dict)
