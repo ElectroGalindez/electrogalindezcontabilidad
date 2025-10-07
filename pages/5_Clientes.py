@@ -43,7 +43,7 @@ clientes_filtrados = [c for c in clientes_data if filter_clients(c)]
 # ---------------------------
 # Tabla editable de clientes
 # ---------------------------
-st.subheader("Clientes registrados")
+# Tabla editable de clientes
 if clientes_filtrados:
     df = pd.DataFrame(clientes_filtrados)
     edited_df = st.data_editor(
@@ -61,7 +61,6 @@ if clientes_filtrados:
         }
     )
 
-    # Guardar cambios
     if st.button("💾 Guardar cambios"):
         for _, row in edited_df.iterrows():
             update_client(
@@ -73,15 +72,14 @@ if clientes_filtrados:
                 chapa=row.get("chapa",""),
                 usuario=usuario_actual
             )
+
         st.success("✅ Clientes actualizados")
-        # Limpiar cache para que se vea reflejado inmediatamente
+        # Limpiar cache para mostrar los cambios inmediatamente
         if "cached_clients" in st.session_state:
             del st.session_state["cached_clients"]
         st.experimental_rerun()
 else:
     st.info("No hay clientes que coincidan con los filtros.")
-
-st.divider()
 
 # ---------------------------
 # Crear nuevo cliente

@@ -27,20 +27,43 @@ def add_client(nombre, telefono, ci, chapa, direccion):
         row = result.fetchone()
         return row._mapping if row else None
 
-def update_client(cliente_id: str, cambios: Dict[str, Any], usuario: str = "sistema") -> Dict[str, Any]:
-    """Actualiza campos de un cliente existentes"""
-    if not cambios:
-        raise ValueError("No hay cambios para aplicar")
-    sets = ", ".join([f"{k} = :{k}" for k in cambios])
-    query = text(f"UPDATE clientes SET {sets} WHERE id = :id")
-    try:
-        with engine.begin() as conn:
-            conn.execute(query, {**cambios, "id": cliente_id})
-        registrar_log(usuario, "update_client", {"id": cliente_id, "cambios": cambios})
-        return get_client(cliente_id)
-    except Exception as e:
-        registrar_log(usuario, "error_update_client", {"id": cliente_id, "error": str(e)})
-        raise
+def update_client(cliente_id: str, nombre=None, telefono=None, ci=None, chapa=None, direccion=None, usuario=None):
+    """
+    Actualiza los datos de un cliente existente en la base de datos.
+    Parámetros opcionales: nombre, telefono, ci, chapa, direccion
+    """
+    with engine.begin() as conn:
+        cliente = get_client(cliente_id)
+        if not cliente:
+            raise ValueError(f"No existe el cliente con ID {cliente_id}")
+
+        # Preparar los valores nuevos, manteniendo los anteriores si no se pasan
+        nombre = nombre or cliente.get("nombre")
+        telefono = telefono or cliente.get("telefono", "")
+        ci = ci or cliente.get("ci", "")
+        chapa = chapa or cliente.get("chapa", "")
+        direccion = direccion or cliente.get("direccion", "")
+
+        query = text("""
+            UPDATE clientes
+            SET nombre = :nombre,
+                telefono = :telefono,
+                ci = :ci,
+                chapa = :chapa,
+                direccion = :direccion
+            WHERE id = :id
+        """)
+        conn.execute(query, {
+            "id": cliente_id,
+            "nombre": nombre,
+            "telefono": telefono,
+            "ci": ci,
+            "chapa": chapa,
+            "direccion": direccion
+        })
+
+    registrar_log(usuario or "sistema", "update_client", {"id": cliente_id})
+    return get_client(cliente_id)
 
 def delete_client(cliente_id: str, usuario: str = "sistema") -> bool:
     """Elimina un cliente"""
