@@ -76,3 +76,14 @@ def eliminar_categoria(cat_id: int, usuario: str = None) -> str:
 
     registrar_log(usuario or "sistema", "eliminar_categoria", {"id": cat_id, "nombre": categoria["nombre"]})
     return categoria["nombre"]
+
+# backend/productos.py
+from sqlalchemy import text
+from .db import engine
+
+def list_products_by_category(categoria_id: int) -> list[dict]:
+    """Devuelve todos los productos de una categoría específica"""
+    query = text("SELECT * FROM productos WHERE categoria_id = :categoria_id ORDER BY nombre")
+    with engine.connect() as conn:
+        result = conn.execute(query, {"categoria_id": categoria_id})
+        return [dict(row) for row in result.mappings().all()]

@@ -1,6 +1,7 @@
+# pages/5_Categorias.py
 import streamlit as st
 import pandas as pd
-from backend import categorias
+from backend import categorias, productos
 
 st.set_page_config(page_title="Categorías", layout="wide")
 st.title("📂 Gestión de Categorías")
@@ -8,9 +9,9 @@ st.title("📂 Gestión de Categorías")
 # ---------------------------
 # Verificar sesión
 # ---------------------------
-if "usuario" not in st.session_state or st.session_state.usuario is None:
-    st.warning("Debes iniciar sesión para acceder a esta página.")
-    st.stop()
+# if "usuario" not in st.session_state or st.session_state.usuario is None:
+#     st.warning("Debes iniciar sesión para acceder a esta página.")
+#     st.stop()
 
 # ---------------------------
 # Cargar categorías
@@ -56,20 +57,31 @@ nombre = st.text_input(
 # Botones
 col1, col2 = st.columns([1,1])
 
-# Guardar
+# Guardar categoría
 with col1:
     if st.button("💾 Guardar Categoría"):
-        if categoria_actual:
-            categorias.editar_categoria(categoria_actual["id"], nombre)
-            st.success(f"Categoría '{nombre}' actualizada ✅")
-        else:
-            categorias.agregar_categoria(nombre)
-            st.success(f"Categoría '{nombre}' creada ✅")
-        st.experimental_rerun()
+        try:
+            if categoria_actual:
+                categorias.editar_categoria(categoria_actual["id"], nombre, usuario=st.session_state.usuario["username"])
+                st.success(f"Categoría '{nombre}' actualizada ✅")
+            else:
+                categorias.agregar_categoria(nombre, usuario=st.session_state.usuario["username"])
+                st.success(f"Categoría '{nombre}' creada ✅")
+            st.experimental_rerun()
+        except Exception as e:
+            st.error(f"Error: {str(e)}")
 
-# Eliminar
+# Eliminar categoría
 with col2:
     if categoria_actual and st.button("🗑️ Eliminar Categoría"):
-        categorias.eliminar_categoria(categoria_actual["id"])
-        st.warning(f"Categoría '{categoria_actual['nombre']}' eliminada ❌")
-        st.experimental_rerun()
+        try:
+            # Verificar si hay productos asociados
+            asociados = productos.list_products_by_category(categoria_actual["id"])
+            if asociados:
+                st.warning(f"No se puede eliminar la categoría '{categoria_actual['nombre']}' porque tiene productos asociados.")
+            else:
+                categorias.eliminar_categoria(categoria_actual["id"], usuario=st.session_state.usuario["username"])
+                st.success(f"Categoría '{categoria_actual['nombre']}' eliminada ✅")
+                st.experimental_rerun()
+        except Exception as e:
+            st.error(f"Error: {str(e)}")
