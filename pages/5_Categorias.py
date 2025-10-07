@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-from backend import categorias, productos
+from backend import categorias
 
 st.set_page_config(page_title="Categorías", layout="wide")
 st.title("📂 Gestión de Categorías")
@@ -53,48 +53,23 @@ nombre = st.text_input(
     key="cat_nombre"
 )
 
-# ---------------------------
-# Botones Guardar / Eliminar
-# ---------------------------
+# Botones
 col1, col2 = st.columns([1,1])
 
 # Guardar
 with col1:
     if st.button("💾 Guardar Categoría"):
-        try:
-            if categoria_actual:
-                categorias.editar_categoria(categoria_actual["id"], nombre, usuario=st.session_state["usuario"]["username"])
-                st.success(f"Categoría '{nombre}' actualizada ✅")
-            else:
-                categorias.agregar_categoria(nombre, usuario=st.session_state["usuario"]["username"])
-                st.success(f"Categoría '{nombre}' creada ✅")
-            # Actualizar lista y recargar
-            st.session_state["recargar"] = True
-        except Exception as e:
-            st.error(f"Error: {e}")
+        if categoria_actual:
+            categorias.editar_categoria(categoria_actual["id"], nombre)
+            st.success(f"Categoría '{nombre}' actualizada ✅")
+        else:
+            categorias.agregar_categoria(nombre)
+            st.success(f"Categoría '{nombre}' creada ✅")
+        st.experimental_rerun()
 
 # Eliminar
 with col2:
     if categoria_actual and st.button("🗑️ Eliminar Categoría"):
-        try:
-            asociados = productos.list_products_by_category(categoria_actual["id"])
-            if asociados:
-                st.warning(
-                    f"No se puede eliminar la categoría '{categoria_actual['nombre']}' porque tiene {len(asociados)} productos asociados."
-                )
-            else:
-                categorias.eliminar_categoria(
-                    categoria_actual["id"],
-                    usuario=st.session_state["usuario"]["username"]
-                )
-                st.success(f"Categoría '{categoria_actual['nombre']}' eliminada ✅")
-                st.experimental_rerun()
-        except Exception as e:
-            st.error(f"Error: {e}")
-
-# ---------------------------
-# Recargar la página si hubo cambios
-# ---------------------------
-if st.session_state.get("recargar"):
-    st.session_state["recargar"] = False
-    st.experimental_rerun()
+        categorias.eliminar_categoria(categoria_actual["id"])
+        st.warning(f"Categoría '{categoria_actual['nombre']}' eliminada ❌")
+        st.experimental_rerun()
