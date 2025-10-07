@@ -5,54 +5,46 @@ from sqlalchemy import text
 from backend.db import engine
 from .productos import  get_product, update_product
 from .logs import registrar_log
+from .deudas import add_debt
 import json
 
 # ----------------------------
 # Funciones de ventas
 # ----------------------------
 
-# =========================
-# Registrar una venta
-# =========================
-def register_sale(cliente_id, items, pagado, tipo_pago, usuario=None):
+
+def register_sale(cliente_id, productos, total, pagado, tipo_pago=None, usuario=None):
     """
-    Registra una venta en la base de datos, actualiza stock y guarda productos vendidos.
-    
-    items: lista de dicts [{"id_producto": int, "nombre": str, "cantidad": int, "precio_unitario": float}]
+    Registra una venta. Si hay saldo pendiente, crea automáticamente una deuda
+    después de confirmar la venta (para respetar la clave foránea).
     """
-    if not items:
+    if not productos:
         raise ValueError("No hay productos para registrar en la venta.")
-
-    # Calcular total
-    total = sum(item["cantidad"] * item["precio_unitario"] for item in items)
-
-    # Guardar productos vendidos como JSON
-    productos_vendidos_json = json.dumps(items)
 
     fecha = datetime.now()
 
-    # Query para insertar venta
-    query = text("""
+    # 1️⃣ Guardar la venta primero (y confirmar)
+    insert_venta = text("""
         INSERT INTO ventas (fecha, cliente_id, total, pagado, tipo_pago, productos_vendidos)
         VALUES (:fecha, :cliente_id, :total, :pagado, :tipo_pago, :productos_vendidos)
-        RETURNING id, total
+        RETURNING id, total, pagado
     """)
 
     with engine.begin() as conn:
-        result = conn.execute(query, {
+        result = conn.execute(insert_venta, {
             "fecha": fecha,
             "cliente_id": cliente_id,
             "total": total,
             "pagado": pagado,
             "tipo_pago": tipo_pago,
-            "productos_vendidos": productos_vendidos_json
+            "productos_vendidos": json.dumps(productos)
         })
-        venta_registrada = result.mappings().fetchone()
+        venta = result.mappings().fetchone()
 
-        # Actualizar stock de productos
-        for item in items:
+        # Actualizar stock dentro de la misma transacción
+        for item in productos:
             prod = get_product(item["id_producto"])
-            if prod is None:
+            if not prod:
                 raise ValueError(f"Producto con ID {item['id_producto']} no encontrado.")
             nuevo_stock = prod["cantidad"] - item["cantidad"]
             if nuevo_stock < 0:
@@ -64,8 +56,20 @@ def register_sale(cliente_id, items, pagado, tipo_pago, usuario=None):
                 precio=prod["precio"]
             )
 
-    return dict(venta_registrada)
+    # 🔹 2️⃣ Ya fuera del bloque de transacción, crear la deuda (ahora sí existe venta_id)
+    saldo_pendiente = round(float(total) - float(pagado), 2)
+    if saldo_pendiente > 0:
+        add_debt(
+            cliente_id=cliente_id,
+            monto=saldo_pendiente,
+            venta_id=venta["id"],
+            fecha=fecha,
+            estado="pendiente",
+            usuario=usuario,
+            productos=productos
+        )
 
+    return dict(venta)
 
 # =========================
 # Listar ventas

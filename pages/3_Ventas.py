@@ -130,27 +130,45 @@ if st.session_state["items_venta"]:
     total = df["subtotal"].astype(float).sum()
     st.subheader(f"💰 Total: ${total:,.2f}")
 
+    col_a, col_b = st.columns([1, 1])
+    with col_a:
+        if st.button("🗑️ Vaciar orden", key="vaciar_orden"):
+            st.session_state["items_venta"] = []
+            st.success("🧹 Orden vaciada correctamente.")
+            st.rerun()  # Reinicia la interfaz para limpiar todo
+
     if cliente_id:
         pago_estado = st.radio("Estado del pago", ["Pagado", "Pendiente"])
         tipo_pago = st.selectbox(
             "Método de pago",
             ["Efectivo", "Transferencia", "Tarjeta", "Otro"],
             key="tipo_pago_venta"
-        ) if pago_estado == "Pagado" else None
+        ) if pago_estado == "Pagado" else "Pendiente"
 
-        if st.button("💾 Registrar Venta", key="registrar_venta"):
-            try:
-                # Convertir a JSON antes de guardar en la DB
-                items_json = json.dumps(st.session_state["items_venta"])
+        with col_b:
+            if st.button("💾 Registrar Venta", key="registrar_venta"):
+                try:
+                    # Convertir items a JSON antes de guardar
+                    items_json = json.dumps(st.session_state["items_venta"])
 
-                nueva_venta = ventas.register_sale(
-                    cliente_id=cliente_id,
-                    items=st.session_state["items_venta"],  # lista de dicts
-                    pagado=float(total) if pago_estado == "Pagado" else 0.0,
-                    tipo_pago=tipo_pago,
-                    usuario=st.session_state["usuario"]["username"]
-                )
-                st.success(f"Venta registrada: ID {nueva_venta['id']} - Total ${nueva_venta['total']:,.2f}")
-                st.session_state["items_venta"] = []
-            except Exception as e:
-                st.error(f"Error: {str(e)}")
+                    # Determinar monto pagado
+                    monto_pagado = float(total) if pago_estado == "Pagado" else 0.0
+
+                    # Registrar venta
+                    nueva_venta = ventas.register_sale(
+                        cliente_id=cliente_id,
+                        productos=st.session_state["items_venta"],
+                        total=float(total),
+                        pagado=monto_pagado,
+                        usuario=st.session_state["usuario"]["username"],
+                        tipo_pago=tipo_pago
+                    )
+
+                    st.success(f"Venta registrada ✅ ID {nueva_venta['id']} - Total ${nueva_venta['total']:,.2f}")
+
+                    # Limpiar carrito
+                    st.session_state["items_venta"] = []
+                    st.rerun()
+
+                except Exception as e:
+                    st.error(f"Error: {str(e)}")

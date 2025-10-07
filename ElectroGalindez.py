@@ -65,12 +65,26 @@ col3.metric("💳 Deudas pendientes", f"${total_deuda:,.2f}", "⚠️ Revisar" i
 # -------------------------
 # KPIs - fila 2
 # -------------------------
+# Convertir a float para evitar errores con Decimal
+df_ventas["total"] = df_ventas["total"].astype(float)
+df_ventas["saldo"] = df_ventas["saldo"].astype(float)
+
+ventas_hoy["total"] = ventas_hoy["total"].astype(float)
+
+# Totales
+total_ventas = df_ventas["total"].sum() if not df_ventas.empty else 0.0
+total_deuda = df_ventas["saldo"].sum() if not df_ventas.empty else 0.0
+
+# Ticket promedio
+ticket_promedio = ventas_hoy["total"].mean() if not ventas_hoy.empty else 0.0
+
+# % Deuda sobre ventas
+pct_deuda = (total_deuda / total_ventas * 100) if total_ventas > 0 else 0.0
+
+# Mostrar métricas
 col1, col2, col3 = st.columns(3)
 col1.metric("🛒 Nº Ventas hoy", len(ventas_hoy))
-ticket_promedio = ventas_hoy["total"].mean() if not ventas_hoy.empty else 0.0
 col2.metric("🧾 Ticket promedio (hoy)", f"${ticket_promedio:,.2f}")
-total_ventas = df_ventas["total"].sum() if not df_ventas.empty else 0.0
-pct_deuda = (total_deuda/total_ventas*100) if total_ventas>0 else 0
 col3.metric("💳 % Deuda sobre ventas", f"{pct_deuda:.1f}%")
 
 # -------------------------
@@ -80,8 +94,13 @@ col1, col2, col3 = st.columns(3)
 stock_bajo = df_productos[df_productos["cantidad"]<=5].shape[0] if not df_productos.empty else 0
 col1.metric("📦 Total Productos", df_productos.shape[0] if not df_productos.empty else 0, f"⚠️ {stock_bajo} stock bajo" if stock_bajo else "✅ Stock OK")
 col2.metric("👥 Clientes registrados", df_clientes.shape[0] if not df_clientes.empty else 0)
-clientes_con_deuda = df_clientes[df_clientes.get("deuda_total", 0)>0].shape[0] if not df_clientes.empty else 0
+if not df_clientes.empty and "deuda_total" in df_clientes.columns:
+    clientes_con_deuda = df_clientes[df_clientes["deuda_total"] > 0].shape[0]
+else:
+    clientes_con_deuda = 0
+
 col3.metric("👥 Clientes con deuda", clientes_con_deuda)
+
 
 st.write("Ventas:", df_ventas)
 st.write("Productos:", df_productos)
