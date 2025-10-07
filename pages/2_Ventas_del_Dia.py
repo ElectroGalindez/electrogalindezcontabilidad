@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 from io import BytesIO
 from backend import ventas, clientes
+import numpy as np
 
 st.set_page_config(page_title="Ventas del Día", layout="wide")
 st.title("🛒 Reporte de Ventas del Día")
@@ -66,41 +67,65 @@ def generar_filas(v):
     return filas
 
 # ---------------------------
-# Crear DataFrame
+# Crear DataFrame con ventas del rango seleccionado
 # ---------------------------
-rows = [fila for v in ventas_data if fecha_inicio <= pd.to_datetime(v.get("fecha", pd.Timestamp.now())).date() <= fecha_fin for fila in generar_filas(v)]
+rows = [
+    fila
+    for v in ventas_data
+    if fecha_inicio <= pd.to_datetime(v.get("fecha", pd.Timestamp.now())).date() <= fecha_fin
+    for fila in generar_filas(v)
+]
+
 if not rows:
     st.info("No hay ventas registradas en este rango de fechas.")
     st.stop()
 
 df_ventas = pd.DataFrame(rows)
 
-# Asegurar columnas esperadas
-expected_cols = ["ID Venta","Fecha","Cliente","Teléfono","Producto","Cantidad","Precio Unitario",
-                 "Subtotal","Total Venta","Pagado","Saldo Pendiente","Estado"]
-for col in expected_cols:
+# ---------------------------
+# Asegurar columnas clave
+# ---------------------------
+cols_principales = [
+    "ID Venta", "Fecha", "Cliente", "Teléfono", "Producto",
+    "Cantidad", "Precio Unitario", "Total Venta", "Pagado", "Saldo Pendiente", "Estado"
+]
+for col in cols_principales:
     if col not in df_ventas.columns:
-        df_ventas[col] = 0 if df_ventas.empty else ""
+        df_ventas[col] = ""
 
-df_ventas["Fecha_dt"] = df_ventas["Fecha"]
-df_ventas["Fecha_str"] = df_ventas["Fecha_dt"].dt.date
-df_ventas["Hora"] = df_ventas["Fecha_dt"].dt.strftime("%H:%M:%S")
-df_ventas = df_ventas.sort_values("Fecha_dt")
+# ---------------------------
+# Limpieza y formato
+# ---------------------------
+df_ventas["Fecha"] = pd.to_datetime(df_ventas["Fecha"], errors="coerce")
+df_ventas = df_ventas.sort_values("Fecha", ascending=False)
+
+# Redondear y formatear números
+for c in ["Cantidad", "Precio Unitario", "Total Venta", "Pagado", "Saldo Pendiente"]:
+    if c in df_ventas.columns:
+        df_ventas[c] = pd.to_numeric(df_ventas[c], errors="coerce").fillna(0).round(2)
+
+# Aplicar formato visual
+df_ventas_display = df_ventas.copy()
+df_ventas_display["Precio Unitario"] = df_ventas_display["Precio Unitario"].apply(lambda x: f"${x:,.2f}")
+df_ventas_display["Total Venta"] = df_ventas_display["Total Venta"].apply(lambda x: f"${x:,.2f}")
+df_ventas_display["Pagado"] = df_ventas_display["Pagado"].apply(lambda x: f"${x:,.2f}")
+df_ventas_display["Saldo Pendiente"] = df_ventas_display["Saldo Pendiente"].apply(lambda x: f"${x:,.2f}")
 
 # ---------------------------
 # Mostrar todas las ventas
 # ---------------------------
-st.subheader("📋 Todas las ventas")
-st.dataframe(df_ventas.drop(columns=["Fecha_dt","Fecha_str"]), use_container_width=True)
+st.subheader("📋 Todas las Ventas")
+st.dataframe(df_ventas_display[cols_principales], use_container_width=True, hide_index=True)
 
 # ---------------------------
 # Ventas Pagadas
 # ---------------------------
 st.subheader("✅ Ventas Pagadas")
-pagadas = df_ventas[df_ventas["Estado"] == "Pagada"]
+pagadas = df_ventas[df_ventas["Estado"].str.lower() == "pagada"]
 if not pagadas.empty:
-    st.dataframe(pagadas, use_container_width=True)
-    st.metric("Total ventas pagadas", f"${pagadas['Pagado'].sum():,.2f}")
+    total_pagadas = pagadas["Pagado"].sum()
+    st.metric("💵 Total Ventas Pagadas", f"${total_pagadas:,.2f}")
+    st.dataframe(df_ventas_display[df_ventas_display["Estado"].str.lower() == "pagada"], use_container_width=True, hide_index=True)
 else:
     st.info("No hay ventas pagadas en este rango.")
 
@@ -108,10 +133,11 @@ else:
 # Ventas con Deuda
 # ---------------------------
 st.subheader("⚠️ Ventas con Deuda")
-pendientes = df_ventas[df_ventas["Estado"] == "Pendiente"]
+pendientes = df_ventas[df_ventas["Estado"].str.lower() == "pendiente"]
 if not pendientes.empty:
-    st.dataframe(pendientes, use_container_width=True)
-    st.metric("Total pendiente", f"${pendientes['Subtotal'].sum():,.2f}")
+    total_pendiente = pendientes["Saldo Pendiente"].sum()
+    st.metric("💰 Total Pendiente", f"${total_pendiente:,.2f}")
+    st.dataframe(df_ventas_display[df_ventas_display["Estado"].str.lower() == "pendiente"], use_container_width=True, hide_index=True)
 else:
     st.info("No hay ventas pendientes en este rango.")
 
@@ -121,17 +147,34 @@ else:
 st.subheader("📊 Métricas Generales")
 st.metric("Total ventas", f"{df_ventas['ID Venta'].nunique()}")
 st.metric("Productos vendidos", f"{df_ventas['Cantidad'].sum():,.0f}")
-st.metric("Ingresos totales", f"${df_ventas['Subtotal'].sum():,.2f}")
 st.metric("Total pagado", f"${df_ventas['Pagado'].sum():,.2f}")
 st.metric("Deuda total", f"${df_ventas['Saldo Pendiente'].sum():,.2f}")
 
 # ---------------------------
 # Botones de descarga Excel
 # ---------------------------
-def descargar_excel(df, nombre_archivo):
+
+def descargar_excel(df: pd.DataFrame, nombre_archivo: str):
+    """
+    Descarga un DataFrame como Excel, quitando la columna 'Subtotal' y formateando fechas.
+    """
+    df_export = df.copy()
+    
+    # 🔹 Eliminar columna 'Subtotal' si existe
+    if "Subtotal" in df_export.columns:
+        df_export.drop(columns=["Subtotal"], inplace=True)
+    
+    # 🔹 Formatear todas las columnas datetime
+    for col in df_export.columns:
+        if np.issubdtype(df_export[col].dtype, np.datetime64):
+            df_export[col] = df_export[col].dt.strftime("%Y-%m-%d %H:%M:%S")
+    
+    # 🔹 Crear buffer Excel
     buffer = BytesIO()
     with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
-        df.to_excel(writer, index=False, sheet_name="Reporte")
+        df_export.to_excel(writer, index=False, sheet_name="Reporte")
+    
+    # 🔹 Botón de descarga
     st.download_button(
         label=f"💾 Descargar {nombre_archivo}",
         data=buffer.getvalue(),

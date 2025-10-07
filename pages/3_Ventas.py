@@ -1,11 +1,8 @@
 import streamlit as st
 import pandas as pd
-from datetime import datetime
-import json
 from backend import productos, clientes, ventas
-from backend.deudas import add_debt 
-from backend.clientes import add_client
-
+from backend.deudas import add_debt
+from datetime import datetime
 
 st.set_page_config(page_title="Ventas", layout="wide")
 st.title("🛒 Registrar Venta")
@@ -17,30 +14,43 @@ if "usuario" not in st.session_state or st.session_state.usuario is None:
     st.warning("Debes iniciar sesión para acceder a esta página.")
     st.stop()
 
+usuario_actual = st.session_state.usuario["username"]
+
 # ---------------------------
-# Cliente
+# Cache de clientes y productos
 # ---------------------------
-st.subheader("👤 Cliente")
-clientes_data = clientes.list_clients()
+@st.cache_data(ttl=10)
+def cached_clients():
+    return clientes.list_clients()
+
+clientes_data = cached_clients()
+
+@st.cache_data(ttl=10)
+def cached_products():
+    return productos.list_products()
+
+productos_data = cached_products()
+
+
 clientes_dict = {c["nombre"]: c["id"] for c in clientes_data}
+
+# =========================
+# 👤 Selección de cliente
+# =========================
+st.subheader("Cliente")
 cliente_id = None
+cliente_nombre = st.selectbox(
+    "Selecciona un cliente existente",
+    [""] + list(clientes_dict.keys()),
+    key="select_cliente_ventas"
+)
+if cliente_nombre:
+    cliente_id = clientes_dict[cliente_nombre]
 
-# Selección de cliente existente
-if clientes_dict:
-    cliente_nombre = st.selectbox(
-        "Selecciona un cliente existente",
-        [""] + list(clientes_dict.keys()),
-        key="select_cliente_ventas"
-    )
-
-    if cliente_nombre:
-        cliente_id = clientes_dict[cliente_nombre]
-
-
-# ---------------------------
-# Crear nuevo cliente
-# ---------------------------
-st.subheader("➕ Crear nuevo cliente")
+# =========================
+# ➕ Crear nuevo cliente
+# =========================
+st.subheader("Crear nuevo cliente")
 with st.form("form_nuevo_cliente", clear_on_submit=True):
     nombre_nuevo = st.text_input("Nombre *")
     direccion_nueva = st.text_input("Dirección")
@@ -52,7 +62,7 @@ with st.form("form_nuevo_cliente", clear_on_submit=True):
         if not nombre_nuevo.strip():
             st.error("❌ El nombre no puede estar vacío.")
         else:
-            add_client(
+            clientes.add_client(
                 nombre=nombre_nuevo,
                 direccion=direccion_nueva,
                 telefono=telefono_nuevo,
@@ -60,17 +70,16 @@ with st.form("form_nuevo_cliente", clear_on_submit=True):
                 chapa=chapa_nueva
             )
             st.success(f"✅ Cliente '{nombre_nuevo}' creado")
+            st.cache_data.clear()  # limpiar cache de clientes
             st.experimental_rerun()
 
 # =========================
-# 📦 Sección de productos
+# 📦 Selección de productos
 # =========================
 if "items_venta" not in st.session_state:
     st.session_state["items_venta"] = []
 
-productos_data = productos.list_products()
-st.subheader("📦 Productos disponibles")
-
+st.subheader("Productos disponibles")
 if productos_data:
     opciones = {
         f"{p['nombre']} (Stock: {p['cantidad']}, ${p['precio']:.2f})": p
@@ -126,71 +135,84 @@ else:
 # =========================
 # 📝 Orden actual
 # =========================
-if st.session_state.get("items_venta"):
-    st.subheader("📝 Orden actual")
+if st.session_state["items_venta"]:
+    st.subheader("Orden actual")
     df = pd.DataFrame(st.session_state["items_venta"])
     df["subtotal"] = df["cantidad"] * df["precio_unitario"]
-    df_resumen = df[["id_producto", "nombre", "cantidad", "precio_unitario", "subtotal"]]
-    
-    # Mostrar la tabla de manera compatible con la nueva versión de Streamlit
-    st.dataframe(df_resumen, width='stretch')
+    st.dataframe(df[["id_producto","nombre","cantidad","precio_unitario","subtotal"]], use_container_width=True)
 
-    total = df["subtotal"].astype(float).sum()
+    total = df["subtotal"].sum()
     st.subheader(f"💰 Total: ${total:,.2f}")
 
-    col_a, col_b = st.columns([1, 1])
+    col_a, col_b = st.columns([1,1])
 
     with col_a:
         if st.button("🗑️ Vaciar orden", key="vaciar_orden"):
             st.session_state["items_venta"] = []
             st.success("🧹 Orden vaciada correctamente.")
-            st.rerun()
+            st.experimental_rerun()
 
-    if cliente_id:
-        pago_estado = st.radio("Estado del pago", ["Pagado", "Pendiente"])
-        tipo_pago = (
-            st.selectbox(
-                "Método de pago",
-                ["Efectivo", "Transferencia", "Tarjeta", "Otro"],
-                key="tipo_pago_venta"
-            ) if pago_estado == "Pagado" else "Pendiente"
-        )
+    with col_b:
+        if cliente_id:
+            pago_estado = st.radio("Estado del pago", ["Pagado", "Pendiente"])
+            tipo_pago = (
+                st.selectbox(
+                    "Método de pago",
+                    ["Efectivo", "Transferencia", "Tarjeta", "Otro"],
+                    key="tipo_pago_venta"
+                ) if pago_estado == "Pagado" else "Pendiente"
+            )
 
-        with col_b:
             if st.button("💾 Registrar Venta", key="registrar_venta"):
-                try:
-                    # Determinar monto pagado
-                    monto_pagado = float(total) if pago_estado == "Pagado" else 0.0
-
-                    # Registrar venta
-                    nueva_venta = ventas.register_sale(
-                        cliente_id=cliente_id,
-                        productos=st.session_state["items_venta"],
-                        total=float(total),
-                        pagado=monto_pagado,
-                        usuario=st.session_state["usuario"]["username"],
-                        tipo_pago=tipo_pago
-                    )
-
-                    # Crear deuda solo si el pago es pendiente
-                    if pago_estado == "Pendiente":
-                        from backend.deudas import add_debt
-                        saldo_pendiente = float(total) - monto_pagado
-                        deuda_id = add_debt(
+                if not st.session_state["items_venta"]:
+                    st.error("No hay productos en la venta.")
+                else:
+                    try:
+                        monto_pagado = float(total) if pago_estado == "Pagado" else 0.0
+                        nueva_venta = ventas.register_sale(
                             cliente_id=cliente_id,
-                            monto=saldo_pendiente,  # 🔹 ahora coincide con la función
-                            venta_id=nueva_venta["id"],
                             productos=st.session_state["items_venta"],
-                            usuario=st.session_state["usuario"]["username"],
-                            estado="pendiente"
+                            total=float(total),
+                            pagado=monto_pagado,
+                            usuario=usuario_actual,
+                            tipo_pago=tipo_pago
                         )
-                        st.info(f"Deuda creada con ID {deuda_id} por ${saldo_pendiente:,.2f}")
-                        
-                    st.success(f"Venta registrada ✅ ID {nueva_venta['id']} - Total ${nueva_venta['total']:,.2f}")
 
-                    # Limpiar carrito
-                    st.session_state["items_venta"] = []
-                    st.rerun()
+                        # Registrar deuda si aplica
+                        if pago_estado == "Pendiente":
+                            saldo_pendiente = float(total) - monto_pagado
+                            deuda_id = add_debt(
+                                cliente_id=cliente_id,
+                                monto_total=saldo_pendiente,  # ✅ corregido
+                                venta_id=nueva_venta["id"],
+                                productos=st.session_state["items_venta"],
+                                usuario=st.session_state["usuario"]["username"],
+                                estado="pendiente"
+                            )
+                            st.info(f"Deuda creada por ${saldo_pendiente:,.2f}")
 
-                except Exception as e:
-                    st.error(f"Error al registrar la venta: {str(e)}")
+                        st.success(f"✅ Venta registrada ID {nueva_venta['id']} - Total ${nueva_venta['total']:.2f}")
+                        st.session_state["items_venta"] = []
+                        st.experimental_rerun()
+
+                    except Exception as e:
+                        st.error(f"Error al registrar la venta: {str(e)}")
+
+
+ventas_data = ventas.list_sales()
+ventas_dict = {f"ID {v['id']} - Cliente {v['cliente_id']} - Total ${v['total']}": v for v in ventas_data}
+
+venta_sel = st.selectbox("Selecciona venta", [""] + list(ventas_dict.keys()))
+if venta_sel:
+    venta_obj = ventas_dict[venta_sel]
+    cliente_obj = clientes.get_client(venta_obj["cliente_id"])
+
+    # Generar PDF
+    pdf_bytes = ventas.generar_factura_excel(venta_obj, cliente_obj)
+
+    st.download_button(
+        label="⬇️ Descargar factura PDF",
+        data=pdf_bytes,
+        file_name=f"Factura_{venta_obj['id']}.pdf",
+        mime="application/pdf"
+    )

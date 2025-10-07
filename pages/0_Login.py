@@ -27,16 +27,18 @@ else:
     password = st.text_input("Contraseña", type="password")
     
     if st.button("Ingresar"):
+        # Llamamos a la función optimizada
         user = autenticar_usuario(username, password)
+
         if isinstance(user, dict) and user.get("bloqueado"):
             try:
                 bloqueado_hasta = datetime.fromisoformat(user['bloqueado_hasta'])
-                st.error(f"Usuario bloqueado hasta {bloqueado_hasta.strftime('%Y-%m-%d %H:%M')}")
+                st.error(f"⚠️ Usuario bloqueado hasta {bloqueado_hasta.strftime('%Y-%m-%d %H:%M')}")
             except:
-                st.error("Usuario bloqueado. Intenta más tarde.")
+                st.error("⚠️ Usuario bloqueado. Intenta más tarde.")
         elif user:
             st.session_state.usuario = user
-            st.success(f"Bienvenido, {user['username']} ({user['rol']})")
+            st.success(f"✅ Bienvenido, {user['username']} ({user['rol']})")
             st.experimental_rerun()
         else:
-            st.error("Usuario o contraseña incorrectos")
+            st.error("❌ Usuario o contraseña incorrectos")

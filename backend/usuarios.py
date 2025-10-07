@@ -28,47 +28,74 @@ def crear_usuario(username, password, rol="empleado", actor=None):
         raise ValueError("El usuario ya existe o hubo un error en la base de datos.") from e
 
 # Autenticar usuario
+from datetime import datetime, timedelta
+import bcrypt
+from backend.db import engine, text
+from .logs import registrar_log
+
 def autenticar_usuario(username, password, max_intentos=5, bloqueo_min=15):
+    """
+    Autenticación optimizada de usuario:
+    - Verifica existencia y estado activo
+    - Bloquea usuario tras max_intentos fallidos
+    - Retorna dict con info de usuario o None
+    """
+    now = datetime.now()
     with engine.connect() as conn:
         row = conn.execute(
-            text("SELECT password, activo, intentos_fallidos, bloqueado_hasta, rol FROM usuarios WHERE username=:username"),
+            text("""
+                SELECT password, activo, intentos_fallidos, bloqueado_hasta, rol 
+                FROM usuarios WHERE username=:username
+            """),
             {"username": username}
         ).fetchone()
 
         if not row:
-            return None
+            return None  # Usuario no existe
 
         hashed, activo, intentos, bloqueado_hasta, rol = row
 
         if not activo:
-            return None
+            return None  # Usuario desactivado
 
-        if bloqueado_hasta and bloqueado_hasta > datetime.now():
+        # Si está bloqueado
+        if bloqueado_hasta and bloqueado_hasta > now:
             return {"bloqueado": True, "bloqueado_hasta": bloqueado_hasta.isoformat()}
 
+        # Contraseña correcta
         if bcrypt.checkpw(password.encode(), hashed.encode()):
-            conn.execute(
-                text("UPDATE usuarios SET intentos_fallidos=0, bloqueado_hasta=NULL WHERE username=:username"),
-                {"username": username}
-            )
+            # Resetear intentos fallidos solo si es necesario
+            if intentos or bloqueado_hasta:
+                conn.execute(
+                    text("UPDATE usuarios SET intentos_fallidos=0, bloqueado_hasta=NULL WHERE username=:username"),
+                    {"username": username}
+                )
             return {"username": username, "rol": rol}
+
+        # Contraseña incorrecta
+        intentos = (intentos or 0) + 1
+        update_data = {"intentos": intentos, "username": username, "bloqueado": None}
+
+        if intentos >= max_intentos:
+            bloqueado = now + timedelta(minutes=bloqueo_min)
+            update_data["bloqueado"] = bloqueado
+            conn.execute(
+                text("""
+                    UPDATE usuarios 
+                    SET intentos_fallidos=:intentos, bloqueado_hasta=:bloqueado 
+                    WHERE username=:username
+                """),
+                update_data
+            )
+            registrar_log(usuario=username, accion="bloqueo_usuario",
+                          detalles={"motivo": "demasiados intentos fallidos", "bloqueado_hasta": bloqueado.isoformat()})
         else:
-            intentos = (intentos or 0) + 1
-            bloqueado = None
-            if intentos >= max_intentos:
-                bloqueado = datetime.now() + timedelta(minutes=bloqueo_min)
-                conn.execute(
-                    text("UPDATE usuarios SET intentos_fallidos=:intentos, bloqueado_hasta=:bloqueado WHERE username=:username"),
-                    {"intentos": intentos, "bloqueado": bloqueado, "username": username}
-                )
-                registrar_log(usuario=username, accion="bloqueo_usuario",
-                              detalles={"motivo": "demasiados intentos fallidos", "bloqueado_hasta": bloqueado.isoformat()})
-            else:
-                conn.execute(
-                    text("UPDATE usuarios SET intentos_fallidos=:intentos WHERE username=:username"),
-                    {"intentos": intentos, "username": username}
-                )
-            return None
+            conn.execute(
+                text("UPDATE usuarios SET intentos_fallidos=:intentos WHERE username=:username"),
+                {"intentos": intentos, "username": username}
+            )
+
+        return None
 
 # Cambiar contraseña
 def cambiar_password(username, new_password, actor=None):

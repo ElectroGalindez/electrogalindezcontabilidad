@@ -1,13 +1,13 @@
 """
-Módulo para manejar deudas y sus detalles (por producto) en PostgreSQL.
+Módulo para manejar deudas y pagos por producto en PostgreSQL.
 
 Funciones públicas:
 - list_debts()
-- get_debt(debt_id)
-- add_debt(cliente_id, monto_total, venta_id=None, productos=None, usuario=None)
-- pay_debt(debt_id, monto_pago, usuario=None)
+- get_debt(deuda_id)
+- add_debt(cliente_id, venta_id=None, productos=None, usuario=None)
+- pay_debt_producto(deuda_id, producto_id, monto_pago, usuario=None)
 - debts_by_client(cliente_id)
-- delete_debt(debt_id, usuario=None)
+- delete_debt(deuda_id, usuario=None)
 """
 
 from typing import List, Dict, Any, Optional
@@ -26,11 +26,10 @@ def list_debts() -> List[Dict[str, Any]]:
         result = conn.execute(query)
         return [dict(row._mapping) for row in result]
 
-
 # ======================================================
-# 🔍 Obtener deuda específica
+# 🔍 Obtener deuda con detalles
 # ======================================================
-def get_debt(debt_id: int) -> Optional[Dict[str, Any]]:
+def get_debt(deuda_id: int) -> Optional[Dict[str, Any]]:
     query = text("""
         SELECT d.*, json_agg(dd.*) AS detalles
         FROM deudas d
@@ -39,141 +38,125 @@ def get_debt(debt_id: int) -> Optional[Dict[str, Any]]:
         GROUP BY d.id
     """)
     with engine.connect() as conn:
-        result = conn.execute(query, {"id": debt_id}).mappings().first()
-        return dict(result) if result else None
-
+        result = conn.execute(query, {"id": deuda_id}).mappings().first()
+        if result:
+            r = dict(result)
+            # Convertir detalles de string JSON a lista si es necesario
+            if isinstance(r["detalles"], str):
+                r["detalles"] = json.loads(r["detalles"])
+            return r
+        return None
 
 # ======================================================
-# ➕ Crear deuda nueva (con detalles por producto)
+# ➕ Crear deuda con detalles por producto
 # ======================================================
 def add_debt(
     cliente_id: int,
     venta_id: int = None,
-    fecha: datetime = None,
+    productos: list = None,  # lista de dicts: {id_producto, cantidad, precio_unitario}
+    monto_total: float = 0.0,
     estado: str = "pendiente",
-    usuario: str = None,
-    productos: list = None,
-    monto: float = 0.0  # 🔹 debe llamarse "monto" para coincidir con la tabla
-):
+    usuario: str = None
+) -> int:
     """
-    Crea un registro de deuda y sus detalles por producto en la base de datos.
+    Crea una deuda general y registros por producto en deudas_detalle.
     """
-    if fecha is None:
-        fecha = datetime.now()
-
+    fecha = datetime.now()
     productos_json = json.dumps(productos or [])
 
-    # Insertar deuda principal
-    query_deuda = text("""
-        INSERT INTO deudas (cliente_id, venta_id, monto, estado, fecha, descripcion, productos)
-        VALUES (:cliente_id, :venta_id, :monto, :estado, :fecha, :descripcion, :productos)
-        RETURNING id
-    """)
     with engine.begin() as conn:
-        result = conn.execute(query_deuda, {
+        # Insertar deuda principal
+        query = text("""
+            INSERT INTO deudas (cliente_id, venta_id, monto_total, estado, fecha, descripcion, productos)
+            VALUES (:cliente_id, :venta_id, :monto_total, :estado, :fecha, :descripcion, :productos)
+            RETURNING id
+        """)
+        deuda_id = conn.execute(query, {
             "cliente_id": cliente_id,
             "venta_id": venta_id,
-            "monto": monto,
+            "monto_total": monto_total,
             "estado": estado,
             "fecha": fecha,
             "descripcion": f"Deuda generada por venta {venta_id or 'N/A'}",
             "productos": productos_json
-        })
-        deuda_id = result.scalar()
+        }).scalar()
 
         # Insertar detalles por producto
         if productos:
-            for item in productos:
+            for p in productos:
                 conn.execute(text("""
                     INSERT INTO deudas_detalle (deuda_id, producto_id, cantidad, precio_unitario, estado)
-                    VALUES (:deuda_id, :producto_id, :cantidad, :precio_unitario, :estado)
+                    VALUES (:deuda_id, :producto_id, :cantidad, :precio_unitario, 'pendiente')
                 """), {
                     "deuda_id": deuda_id,
-                    "producto_id": item.get("id_producto"),
-                    "cantidad": item.get("cantidad", 0),
-                    "precio_unitario": item.get("precio_unitario", 0),
-                    "estado": "pendiente"
+                    "producto_id": p["id_producto"],
+                    "cantidad": p["cantidad"],
+                    "precio_unitario": p["precio_unitario"]
                 })
 
+    # Actualizar deuda total del cliente
+    update_debt(cliente_id, monto_total)
     return deuda_id
 
 # ======================================================
-# 💵 Registrar pago de deuda
+# 💵 Registrar pago de deuda por producto
 # ======================================================
-def pay_debt(debt_id: int, monto_pago: float, usuario: Optional[str] = None) -> Dict[str, Any]:
-    deuda = get_debt(debt_id)
+def pay_debt_producto(deuda_id: int, producto_id: int, monto_pago: float, usuario: Optional[str] = None) -> Dict[str, Any]:
+    """
+    Aplica un pago solo sobre un detalle de deuda (producto) específico.
+    """
+    deuda = get_debt(deuda_id)
     if not deuda:
-        raise KeyError(f"Deuda {debt_id} no encontrada")
+        raise KeyError(f"Deuda {deuda_id} no encontrada")
 
-    saldo = float(deuda["monto_total"])
-    pago = float(monto_pago)
+    detalle = next((d for d in deuda.get("detalles", []) if d["producto_id"] == producto_id), None)
+    if not detalle:
+        raise KeyError(f"Producto {producto_id} no encontrado en la deuda {deuda_id}")
 
-    if pago <= 0:
-        raise ValueError("El monto de pago debe ser mayor que 0")
+    monto_detalle = float(detalle["cantidad"]) * float(detalle["precio_unitario"])
+    if monto_pago <= 0 or monto_pago > monto_detalle:
+        raise ValueError(f"Monto de pago inválido. Debe ser entre 0 y {monto_detalle}")
 
-    if pago > saldo:
-        pago = saldo  # Evita pagar más de lo debido
-
-    nuevo_saldo = round(saldo - pago, 2)
-    nuevo_estado = "pagada" if nuevo_saldo == 0 else "pendiente"
+    nuevo_saldo_det = monto_detalle - monto_pago
+    nuevo_estado_det = "pagado" if nuevo_saldo_det == 0 else "pendiente"
 
     with engine.begin() as conn:
+        if nuevo_estado_det == "pagado":
+            conn.execute(text("UPDATE deudas_detalle SET estado='pagado' WHERE id=:id"), {"id": detalle["id"]})
+        else:
+            # Ajusta el precio unitario proporcionalmente si es pago parcial
+            nuevo_precio_unit = nuevo_saldo_det / float(detalle["cantidad"])
+            conn.execute(text("UPDATE deudas_detalle SET precio_unitario=:nuevo_precio WHERE id=:id"),
+                         {"nuevo_precio": nuevo_precio_unit, "id": detalle["id"]})
+
         # Actualizar deuda principal
-        update_query = text("""
+        nuevo_monto_total = round(float(deuda["monto_total"]) - monto_pago, 2)
+        nuevo_estado = "pagada" if nuevo_monto_total == 0 else "pendiente"
+        result = conn.execute(text("""
             UPDATE deudas
-            SET monto_total = :nuevo_saldo, estado = :nuevo_estado
-            WHERE id = :id
+            SET monto_total=:nuevo_monto_total, estado=:nuevo_estado
+            WHERE id=:id
             RETURNING *
-        """)
-        result = conn.execute(update_query, {
-            "nuevo_saldo": nuevo_saldo,
-            "nuevo_estado": nuevo_estado,
-            "id": debt_id
-        }).mappings().first()
+        """), {"nuevo_monto_total": nuevo_monto_total, "nuevo_estado": nuevo_estado, "id": deuda_id}).mappings().first()
 
-        # Actualizar detalles proporcionalmente (FIFO)
-        if deuda.get("detalles"):
-            restante = pago
-            for det in sorted(deuda["detalles"], key=lambda d: d["id"]):
-                if restante <= 0:
-                    break
+    # Actualizar deuda total del cliente
+    update_debt(deuda["cliente_id"], -monto_pago)
 
-                monto_det = float(det["monto"])
-                if monto_det <= restante:
-                    # Se paga completo el detalle
-                    conn.execute(text("""
-                        UPDATE deudas_detalle SET estado = 'pagado' WHERE id = :id
-                    """), {"id": det["id"]})
-                    restante -= monto_det
-                else:
-                    # Pago parcial → se reduce proporcionalmente
-                    nuevo_monto = monto_det - restante
-                    nuevo_precio = nuevo_monto / det["cantidad"]
-                    conn.execute(text("""
-                        UPDATE deudas_detalle
-                        SET precio_unitario = :nuevo_precio
-                        WHERE id = :id
-                    """), {"nuevo_precio": nuevo_precio, "id": det["id"]})
-                    restante = 0
-
-    # Actualizar deuda_total del cliente
-    update_debt(deuda["cliente_id"], -pago)
-
-    # Log del pago
+    # Registrar log
     try:
         from .logs import registrar_log
-        registrar_log(usuario or "sistema", "pago_deuda", {
-            "deuda_id": debt_id,
+        registrar_log(usuario or "sistema", "pago_deuda_producto", {
+            "deuda_id": deuda_id,
             "cliente_id": deuda["cliente_id"],
-            "monto_pago": pago,
-            "saldo_restante": nuevo_saldo,
-            "estado_final": nuevo_estado
+            "producto_id": producto_id,
+            "monto_pago": monto_pago,
+            "saldo_restante": nuevo_saldo_det,
+            "estado_final": nuevo_estado_det
         })
     except Exception:
         pass
 
     return dict(result)
-
 
 # ======================================================
 # 📋 Listar deudas por cliente
@@ -192,25 +175,24 @@ def debts_by_client(cliente_id: int):
         result = conn.execute(query, {"cliente_id": cliente_id})
         return [dict(row._mapping) for row in result]
 
-
 # ======================================================
 # 🗑️ Eliminar deuda
 # ======================================================
-def delete_debt(debt_id: int, usuario: Optional[str] = None) -> bool:
-    deuda = get_debt(debt_id)
+def delete_debt(deuda_id: int, usuario: Optional[str] = None) -> bool:
+    deuda = get_debt(deuda_id)
     if not deuda:
         return False
 
     with engine.begin() as conn:
-        conn.execute(text("DELETE FROM deudas_detalle WHERE deuda_id = :id"), {"id": debt_id})
-        conn.execute(text("DELETE FROM deudas WHERE id = :id"), {"id": debt_id})
+        conn.execute(text("DELETE FROM deudas_detalle WHERE deuda_id=:id"), {"id": deuda_id})
+        conn.execute(text("DELETE FROM deudas WHERE id=:id"), {"id": deuda_id})
 
     update_debt(deuda["cliente_id"], -float(deuda["monto_total"]))
 
     try:
         from .logs import registrar_log
         registrar_log(usuario or "sistema", "eliminar_deuda", {
-            "deuda_id": debt_id,
+            "deuda_id": deuda_id,
             "cliente_id": deuda["cliente_id"],
             "monto_total": deuda["monto_total"]
         })
