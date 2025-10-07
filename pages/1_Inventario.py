@@ -124,14 +124,14 @@ with col1:
             usuario=st.session_state.usuario["username"]
         )
         st.success(f"Producto '{nombre}' guardado ✅")
-        st.experimental_rerun()
+        st.status()
 
 # Eliminar
 with col2:
     if producto_actual and st.button("🗑️ Eliminar"):
         productos.eliminar_producto(producto_actual["id"], usuario=st.session_state.usuario["username"])
         st.warning(f"Producto '{producto_actual['nombre']}' eliminado ❌")
-        st.experimental_rerun()
+        st.status()
 
 # Descargar Excel
 with col3:

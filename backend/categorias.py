@@ -64,22 +64,15 @@ def editar_categoria(cat_id: int, nombre_nuevo: str, usuario: str = None) -> str
     })
     return nombre_nuevo
 
-def eliminar_categoria(cat_id: int, usuario: str = None) -> str:
-    """Elimina una categoría por ID"""
-    categoria = get_category(cat_id)
-    if not categoria:
-        raise ValueError(f"La categoría con ID {cat_id} no existe.")
-
-    query = text("DELETE FROM categorias WHERE id = :cat_id")
+def eliminar_categoria(cat_id: int, usuario: str = None):
     with engine.begin() as conn:
-        conn.execute(query, {"cat_id": cat_id})
-
-    registrar_log(usuario or "sistema", "eliminar_categoria", {"id": cat_id, "nombre": categoria["nombre"]})
-    return categoria["nombre"]
-
-# backend/productos.py
-from sqlalchemy import text
-from .db import engine
+        res = conn.execute(text("DELETE FROM categorias WHERE id = :id RETURNING id, nombre"), {"id": cat_id})
+        row = res.mappings().first()
+    if row:
+        registrar_log(usuario or "sistema", "eliminar_categoria", dict(row))
+        return dict(row)
+    else:
+        raise ValueError("Categoría no encontrada")
 
 def list_products_by_category(categoria_id: int) -> list[dict]:
     """Devuelve todos los productos de una categoría específica"""
