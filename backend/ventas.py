@@ -13,63 +13,41 @@ import json
 # ----------------------------
 
 
-def register_sale(cliente_id, productos, total, pagado, tipo_pago=None, usuario=None):
+def register_sale(cliente_id, total, pagado, usuario, tipo_pago, productos=None):
     """
-    Registra una venta. Si hay saldo pendiente, crea automáticamente una deuda
-    después de confirmar la venta (para respetar la clave foránea).
+    Registra una venta en la base de datos, opcionalmente con los productos.
     """
-    if not productos:
-        raise ValueError("No hay productos para registrar en la venta.")
-
-    fecha = datetime.now()
-
-    # 1️⃣ Guardar la venta primero (y confirmar)
-    insert_venta = text("""
-        INSERT INTO ventas (fecha, cliente_id, total, pagado, tipo_pago, productos_vendidos)
-        VALUES (:fecha, :cliente_id, :total, :pagado, :tipo_pago, :productos_vendidos)
-        RETURNING id, total, pagado
+    # Guardar venta
+    query = text("""
+        INSERT INTO ventas (cliente_id, total, pagado, usuario, tipo_pago, fecha)
+        VALUES (:cliente_id, :total, :pagado, :usuario, :tipo_pago, :fecha)
+        RETURNING id
     """)
-
+    fecha = datetime.now()
     with engine.begin() as conn:
-        result = conn.execute(insert_venta, {
-            "fecha": fecha,
+        result = conn.execute(query, {
             "cliente_id": cliente_id,
             "total": total,
             "pagado": pagado,
+            "usuario": usuario,
             "tipo_pago": tipo_pago,
-            "productos_vendidos": json.dumps(productos)
+            "fecha": fecha
         })
-        venta = result.mappings().fetchone()
-
-        # Actualizar stock dentro de la misma transacción
-        for item in productos:
-            prod = get_product(item["id_producto"])
-            if not prod:
-                raise ValueError(f"Producto con ID {item['id_producto']} no encontrado.")
-            nuevo_stock = prod["cantidad"] - item["cantidad"]
-            if nuevo_stock < 0:
-                raise ValueError(f"Stock insuficiente para {prod['nombre']}")
-            update_product(
-                id_producto=item["id_producto"],
-                nombre=prod["nombre"],
-                cantidad=nuevo_stock,
-                precio=prod["precio"]
-            )
-
-    # 🔹 2️⃣ Ya fuera del bloque de transacción, crear la deuda (ahora sí existe venta_id)
-    saldo_pendiente = round(float(total) - float(pagado), 2)
-    if saldo_pendiente > 0:
-        add_debt(
-            cliente_id=cliente_id,
-            monto=saldo_pendiente,
-            venta_id=venta["id"],
-            fecha=fecha,
-            estado="pendiente",
-            usuario=usuario,
-            productos=productos
-        )
-
-    return dict(venta)
+        venta_id = result.scalar()
+        
+        # Guardar productos si se pasó la lista
+        if productos:
+            for item in productos:
+                conn.execute(text("""
+                    INSERT INTO ventas_detalle (venta_id, producto_id, cantidad, precio_unitario)
+                    VALUES (:venta_id, :producto_id, :cantidad, :precio_unitario)
+                """), {
+                    "venta_id": venta_id,
+                    "producto_id": item.get("id_producto"),
+                    "cantidad": item.get("cantidad"),
+                    "precio_unitario": item.get("precio_unitario")
+                })
+    return {"id": venta_id, "total": total}
 
 # =========================
 # Listar ventas
