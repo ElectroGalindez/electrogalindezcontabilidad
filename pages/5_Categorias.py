@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 from backend import categorias
+from backend import productos
 
 st.set_page_config(page_title="Categorías", layout="wide")
 st.title("📂 Gestión de Categorías")
@@ -77,9 +78,18 @@ with col1:
 with col2:
     if categoria_actual and st.button("🗑️ Eliminar Categoría"):
         try:
-            categorias.eliminar_categoria(categoria_actual["id"], usuario=st.session_state["usuario"]["username"])
-            st.warning(f"Categoría '{categoria_actual['nombre']}' eliminada ❌")
-            st.session_state["recargar"] = True
+            asociados = productos.list_products_by_category(categoria_actual["id"])
+            if asociados:
+                st.warning(
+                    f"No se puede eliminar la categoría '{categoria_actual['nombre']}' porque tiene {len(asociados)} productos asociados."
+                )
+            else:
+                categorias.eliminar_categoria(
+                    categoria_actual["id"],
+                    usuario=st.session_state["usuario"]["username"]
+                )
+                st.success(f"Categoría '{categoria_actual['nombre']}' eliminada ✅")
+                st.session_state["recargar"] = True
         except Exception as e:
             st.error(f"Error: {e}")
 
