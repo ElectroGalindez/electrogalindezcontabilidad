@@ -75,8 +75,6 @@ with col1:
             st.error(f"Error: {e}")
 
 # Eliminar
-from backend import productos
-
 with col2:
     if categoria_actual and st.button("🗑️ Eliminar Categoría"):
         try:
