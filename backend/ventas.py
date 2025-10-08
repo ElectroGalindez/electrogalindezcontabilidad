@@ -115,115 +115,107 @@ def listar_ventas_dict():
     ventas_dict = {f"ID {v['id']} - Cliente {v['cliente_id']} - Total ${v['total']}": v for v in ventas}
     return ventas_dict
 
-
-
-
 from reportlab.lib.pagesizes import letter
-from reportlab.pdfgen import canvas
+from reportlab.lib import colors
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+from reportlab.lib.styles import getSampleStyleSheet
 from io import BytesIO
 
 def generar_factura_pdf(venta, cliente, productos_vendidos, gestor_info=None):
+    """
+    Genera una factura profesional en PDF mostrando todos los productos de la venta.
+    
+    - venta: dict con info de la venta (id, numero, fecha, total, pagado, saldo, observaciones, desglose_pago)
+    - cliente: dict con info del cliente (nombre, ci, chapa, direccion, telefono)
+    - productos_vendidos: lista de dicts {nombre, cantidad, precio_unitario}
+    - gestor_info: dict opcional con datos del vendedor/chofer
+    """
     buffer = BytesIO()
-    c = canvas.Canvas(buffer, pagesize=letter)
-    width, height = letter
+    doc = SimpleDocTemplate(buffer, pagesize=letter, rightMargin=40, leftMargin=40, topMargin=40, bottomMargin=40)
+    elements = []
+    styles = getSampleStyleSheet()
+    styleN = styles['Normal']
+    styleB = styles['Heading2']
 
-    margen_x = 40
-    y = height - 50
-
+    # ---------------------------
     # Encabezado
-    c.setFont("Helvetica-Bold", 14)
-    c.drawString(margen_x, y, "ElectroGalíndez S.A.")
-    y -= 20
-    c.setFont("Helvetica", 10)
-    c.drawString(margen_x, y, f"Factura N°: {venta.get('numero', venta.get('id','N/A'))}")
-    y -= 15
-    fecha = str(venta.get('fecha','N/A'))
-    c.drawString(margen_x, y, f"Fecha: {fecha}")
-    y -= 20
+    # ---------------------------
+    elements.append(Paragraph("ElectroGalíndez S.A.", styleB))
+    elements.append(Paragraph(f"Factura N°: {venta.get('numero', venta.get('id',''))}", styleN))
+    elements.append(Paragraph(f"Fecha: {str(venta.get('fecha',''))}", styleN))
+    elements.append(Spacer(1, 12))
 
-    # Datos del cliente (valores por defecto si faltan)
+    # ---------------------------
+    # Datos del cliente
+    # ---------------------------
     cliente_nombre = cliente.get("nombre", "N/A")
-    cliente_carnet = cliente.get("carnet", "N/A")
-    cliente_identidad = cliente.get("identidad", "N/A")
-    cliente_chapa = cliente.get("chapa", "N/A")
+    cliente_ci = cliente.get("ci", "N/A")          # mapeado correctamente
+    cliente_chapa = cliente.get("chapa", "N/A")    # mapeado correctamente
+    cliente_direccion = cliente.get("direccion", "N/A")
+    cliente_telefono = cliente.get("telefono", "N/A")
 
-    c.setFont("Helvetica-Bold", 10)
-    c.drawString(margen_x, y, "Cliente:")
-    c.setFont("Helvetica", 10)
-    c.drawString(margen_x + 60, y, str(cliente_nombre))
-    y -= 15
-    c.setFont("Helvetica-Bold", 10)
-    c.drawString(margen_x, y, "Carnet/ID:")
-    c.setFont("Helvetica", 10)
-    c.drawString(margen_x + 60, y, str(cliente_carnet))
-    y -= 15
-    c.setFont("Helvetica-Bold", 10)
-    c.drawString(margen_x, y, "Identidad:")
-    c.setFont("Helvetica", 10)
-    c.drawString(margen_x + 60, y, str(cliente_identidad))
-    y -= 15
-    c.setFont("Helvetica-Bold", 10)
-    c.drawString(margen_x, y, "Chapa:")
-    c.setFont("Helvetica", 10)
-    c.drawString(margen_x + 60, y, str(cliente_chapa))
-    y -= 25
+    elements.append(Paragraph(f"<b>Cliente:</b> {cliente_nombre}", styleN))
+    elements.append(Paragraph(f"<b>Carnet/ID:</b> {cliente_ci}", styleN))
+    elements.append(Paragraph(f"<b>Chapa:</b> {cliente_chapa}", styleN))
+    elements.append(Paragraph(f"<b>Dirección:</b> {cliente_direccion}", styleN))
+    elements.append(Paragraph(f"<b>Teléfono:</b> {cliente_telefono}", styleN))
+    elements.append(Spacer(1, 12))
 
+    # ---------------------------
     # Productos
-    c.setFont("Helvetica-Bold", 10)
-    c.drawString(margen_x, y, "Producto")
-    c.drawString(margen_x + 200, y, "Cantidad")
-    c.drawString(margen_x + 270, y, "Precio Unitario")
-    c.drawString(margen_x + 370, y, "Subtotal")
-    y -= 15
-    c.setFont("Helvetica", 10)
+    # ---------------------------
+    table_data = [["Producto", "Cantidad", "Precio Unitario", "Subtotal"]]
+    for p in productos_vendidos:
+        nombre = p.get("nombre", "N/A")
+        cantidad = float(p.get("cantidad", 0) or 0)
+        precio_unitario = float(p.get("precio_unitario", 0.0) or 0.0)
+        subtotal = cantidad * precio_unitario
+        table_data.append([nombre, str(cantidad), f"${precio_unitario:.2f}", f"${subtotal:.2f}"])
 
-    if not productos_vendidos:
-        c.drawString(margen_x, y, "Ningún producto registrado")
-        y -= 15
-    else:
-        for p in productos_vendidos:
-            nombre = str(p.get("nombre", "N/A"))
-            cantidad = p.get("cantidad") or 0
-            precio = p.get("precio_unitario") or 0.0
-            subtotal = cantidad * precio
+    t = Table(table_data, colWidths=[200, 80, 100, 100])
+    t.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,0), colors.gray),
+        ('TEXTCOLOR',(0,0),(-1,0),colors.whitesmoke),
+        ('ALIGN',(1,1),(-1,-1),'CENTER'),
+        ('GRID', (0,0), (-1,-1), 1, colors.black),
+        ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold')
+    ]))
+    elements.append(t)
+    elements.append(Spacer(1, 12))
 
-            c.drawString(margen_x, y, nombre)
-            c.drawString(margen_x + 200, y, str(cantidad))
-            c.drawString(margen_x + 270, y, f"${precio:.2f}")
-            c.drawString(margen_x + 370, y, f"${subtotal:.2f}")
-            y -= 15
+    # ---------------------------
+    # Totales y pagos
+    # ---------------------------
+    total = float(venta.get("total", 0.0) or 0.0)
+    pagado = float(venta.get("pagado", 0.0) or 0.0)
+    saldo = float(venta.get("saldo", 0.0) or 0.0)
 
-    y -= 10
-    # Totales (con valores por defecto)
-    total = venta.get('total') or 0.0
-    pagado = venta.get('pagado') or 0.0
-    saldo = venta.get('saldo') or 0.0
-    c.setFont("Helvetica-Bold", 10)
-    c.drawString(margen_x, y, f"Total: ${total:.2f}")
-    y -= 15
-    c.drawString(margen_x, y, f"Pagado: ${pagado:.2f}")
-    y -= 15
-    c.drawString(margen_x, y, f"Saldo pendiente: ${saldo:.2f}")
-    y -= 20
+    elements.append(Paragraph(f"<b>Total:</b> ${total:.2f}", styleN))
+    elements.append(Paragraph(f"<b>Pagado:</b> ${pagado:.2f}", styleN))
+    elements.append(Paragraph(f"<b>Saldo pendiente:</b> ${saldo:.2f}", styleN))
+    elements.append(Spacer(1, 12))
 
     # Método de pago
-    metodo = ", ".join(venta.get("desglose_pago", {}).keys()) or "N/A"
-    c.drawString(margen_x, y, f"Método de pago: {metodo}")
-    y -= 20
+    metodo_pago = ", ".join(venta.get("desglose_pago", {}).keys()) or "N/A"
+    elements.append(Paragraph(f"<b>Método de pago:</b> {metodo_pago}", styleN))
+    elements.append(Spacer(1, 12))
 
     # Observaciones
-    obs = venta.get("observaciones") or ""
-    if obs:
-        c.drawString(margen_x, y, f"Observaciones: {obs}")
-        y -= 20
+    observaciones = venta.get("observaciones","")
+    if observaciones:
+        elements.append(Paragraph(f"<b>Observaciones:</b> {observaciones}", styleN))
+        elements.append(Spacer(1, 12))
 
     # Vendedor / Chofer
     if gestor_info:
-        c.drawString(margen_x, y, f"Vendedor: {gestor_info.get('vendedor','N/A')}")
-        c.drawString(margen_x + 200, y, f"Chofer: {gestor_info.get('chofer','N/A')}")
-        y -= 20
+        vendedor = gestor_info.get("vendedor","N/A")
+        chofer = gestor_info.get("chofer","N/A")
+        elements.append(Paragraph(f"<b>Vendedor:</b> {vendedor}", styleN))
+        elements.append(Paragraph(f"<b>Chofer:</b> {chofer}", styleN))
 
-    c.showPage()
-    c.save()
+    # ---------------------------
+    # Construir PDF
+    # ---------------------------
+    doc.build(elements)
     buffer.seek(0)
     return buffer.getvalue()

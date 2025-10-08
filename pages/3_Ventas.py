@@ -199,20 +199,27 @@ if st.session_state["items_venta"]:
                         st.error(f"Error al registrar la venta: {str(e)}")
 
 
-st.subheader("📄 Generar factura profesional en PDF")
+import streamlit as st
+from backend import ventas, clientes
+from io import BytesIO
 
-# ---------------------------
-# Cache de ventas y clientes
-# ---------------------------
+# =========================
+# Función de cache para ventas y clientes
+# =========================
 @st.cache_data(ttl=15)
 def cached_ventas_dict():
     ventas_data = ventas.list_sales()
-    # Diccionario: key legible -> venta
-    return {f"ID {v['id']} - Cliente {v['cliente_id']} - Total ${v.get('total',0):.2f}": v for v in ventas_data}
+    # Genera un diccionario de opciones legibles
+    return {f"ID {v['id']} - Cliente {v.get('cliente_id','N/A')} - Total ${v.get('total',0):.2f}": v for v in ventas_data}
 
 @st.cache_data(ttl=15)
 def cached_cliente(cliente_id):
     return clientes.get_client(cliente_id)
+
+# =========================
+# Interfaz Streamlit
+# =========================
+st.title("💳 Generar Factura Profesional en PDF")
 
 ventas_dict = cached_ventas_dict()
 venta_keys = [""] + list(ventas_dict.keys())
@@ -225,12 +232,26 @@ if venta_sel:
     if cliente_obj is None:
         st.error(f"❌ No se encontró el cliente con ID {venta_obj.get('cliente_id')}")
     else:
+        # =========================
         # Obtener productos de la venta
-        productos_vendidos = venta_obj.get("productos", [])
+        # =========================
+        productos_vendidos = []
+        # Puede tomar los productos de la tabla JSONB 'productos_vendidos'
+        for p in venta_obj.get("productos_vendidos", []):
+            productos_vendidos.append({
+                "nombre": p.get("nombre","N/A"),
+                "cliente_carnet" : p.get("ci", "N/A"),       # usar "ci" de la tabla
+                "cliente_identidad" : p.get("chapa", "N/A"),  # si quieres mostrar chapa como identidad
+                "cantidad": float(p.get("cantidad",0) or 0),
+                "precio_unitario": float(p.get("precio_unitario",0.0) or 0.0)
+            })
 
-        # ---------------------------
-        # Cachear generación de PDF
-        # ---------------------------
+        if not productos_vendidos:
+            st.warning("⚠️ Esta venta no tiene productos registrados.")
+
+        # =========================
+        # Cache para generar PDF
+        # =========================
         @st.cache_data(ttl=30)
         def generar_pdf(venta, cliente, productos):
             from backend.ventas import generar_factura_pdf
@@ -238,7 +259,11 @@ if venta_sel:
 
         pdf_bytes = generar_pdf(venta_obj, cliente_obj, productos_vendidos)
 
-        # Descargar PDF
+        st.success(f"✅ Factura generada correctamente: {venta_obj.get('numero', venta_obj.get('id'))}")
+
+        # =========================
+        # Vista previa PDF (opcional)
+        # =========================
         st.download_button(
             label="⬇️ Descargar factura PDF",
             data=pdf_bytes,
