@@ -32,4 +32,6 @@ fpdf2==2.7.9
 # Date handling
 python-dateutil>=2.8
 
-                
+streamlit
+pandas
+reportlab
