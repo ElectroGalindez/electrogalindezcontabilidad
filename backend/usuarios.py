@@ -5,6 +5,7 @@ import bcrypt
 from backend.db import engine, text
 from .logs import registrar_log
 
+
 # =============================
 # Funciones de usuarios con SQLAlchemy
 # =============================
@@ -27,11 +28,6 @@ def crear_usuario(username, password, rol="empleado", actor=None):
     except Exception as e:
         raise ValueError("El usuario ya existe o hubo un error en la base de datos.") from e
 
-# Autenticar usuario
-from datetime import datetime, timedelta
-import bcrypt
-from backend.db import engine, text
-from .logs import registrar_log
 
 def autenticar_usuario(username, password, max_intentos=5, bloqueo_min=15):
     """

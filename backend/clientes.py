@@ -10,22 +10,53 @@ def get_client(cliente_id: str) -> Optional[Dict[str, Any]]:
         row = result.first()
         return dict(row._mapping) if row else None
 
-def add_client(nombre, telefono, ci, chapa, direccion):
-    with engine.begin() as conn:
-        query = text("""
-            INSERT INTO clientes (nombre, telefono, ci, chapa, direccion)
-            VALUES (:nombre, :telefono, :ci, :chapa, :direccion)
-            RETURNING id, nombre
-        """)
-        result = conn.execute(query, {
-            "nombre": nombre,
-            "telefono": telefono,
-            "ci": ci,
-            "chapa": chapa,
-            "direccion": direccion
-        })
-        row = result.fetchone()
-        return row._mapping if row else None
+
+
+def add_client(nombre, telefono, ci, direccion, chapa, usuario=None):
+    """
+    Agrega un nuevo cliente a la base de datos.
+    Si se pasa 'usuario', se registra quién realizó la acción en la auditoría.
+    """
+    try:
+        with engine.begin() as conn:
+            conn.execute(
+                text("""
+                    INSERT INTO clientes (nombre, telefono, ci, direccion, chapa)
+                    VALUES (:nombre, :telefono, :ci, :direccion, :chapa)
+                """),
+                {
+                    "nombre": nombre.strip(),
+                    "telefono": telefono.strip() if telefono else None,
+                    "ci": ci.strip() if ci else None,
+                    "direccion": direccion.strip() if direccion else None,
+                    "chapa": chapa.strip() if chapa else None
+                }
+            )
+
+                # Validar tipo de usuario antes de registrar el log
+        if usuario and isinstance(usuario, (str, int)):
+            registrar_log(
+                usuario=str(usuario),
+                accion="crear_cliente",
+                detalles={
+                    "nombre": nombre,
+                    "telefono": telefono,
+                    "ci": ci,
+                    "direccion": direccion,
+                    "chapa": chapa
+                }
+            )
+
+        # ✅ Obtener el cliente recién insertado
+        with engine.connect() as conn:
+            nuevo = conn.execute(
+                text("SELECT * FROM clientes ORDER BY id DESC LIMIT 1")
+            ).first()
+            return dict(nuevo._mapping) if nuevo else None
+
+    except Exception as e:
+        print(f"❌ Error al crear cliente: {e}")
+        raise ValueError("Error al registrar el cliente. Verifica los datos e inténtalo nuevamente.")
 
 def update_client(cliente_id: str, nombre=None, telefono=None, ci=None, chapa=None, direccion=None, usuario=None):
     """
