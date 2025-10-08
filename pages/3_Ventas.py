@@ -202,17 +202,50 @@ if st.session_state["items_venta"]:
 ventas_data = ventas.list_sales()
 ventas_dict = {f"ID {v['id']} - Cliente {v['cliente_id']} - Total ${v['total']}": v for v in ventas_data}
 
-venta_sel = st.selectbox("Selecciona venta", [""] + list(ventas_dict.keys()))
+import streamlit as st
+from backend import ventas, clientes
+from io import BytesIO
+
+st.subheader("📄 Generar factura profesional")
+
+# Obtener las ventas disponibles
+ventas_dict = ventas.listar_ventas_dict()  # Debe devolver dict { "Venta N°001": {...}, ... }
+
+venta_sel = st.selectbox("Selecciona una venta", [""] + list(ventas_dict.keys()))
+
 if venta_sel:
     venta_obj = ventas_dict[venta_sel]
     cliente_obj = clientes.get_client(venta_obj["cliente_id"])
 
-    # Generar PDF
-    pdf_bytes = ventas.generar_factura_excel(venta_obj, cliente_obj)
+    # Info adicional del gestor / vendedor
+    gestor_info = {
+        "vendedor": st.session_state.get("usuario", {}).get("nombre", "Vendedor no identificado"),
+        "chofer": venta_obj.get("chofer", "")
+    }
+
+    # Extraer productos vendidos (ajusta según tu estructura)
+    productos_vendidos = [
+        {
+            "nombre": item.get("producto_nombre", "Sin nombre"),
+            "cantidad": float(item.get("cantidad", 0)),
+            "precio_unitario": float(item.get("precio_unitario", 0))
+        }
+        for item in venta_obj.get("detalles", [])
+    ]
+
+    # Generar factura Excel profesional (dos por hoja)
+    excel_bytes = ventas.generar_factura_excel(
+        venta=venta_obj,
+        cliente=cliente_obj,
+        productos_vendidos=productos_vendidos,
+        gestor_info=gestor_info
+    )
+
+    st.success("✅ Factura generada correctamente.")
 
     st.download_button(
-        label="⬇️ Descargar factura PDF",
-        data=pdf_bytes,
-        file_name=f"Factura_{venta_obj['id']}.pdf",
-        mime="application/pdf"
+        label="💾 Descargar factura Excel",
+        data=excel_bytes,
+        file_name=f"Factura_{venta_obj['id']}.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
