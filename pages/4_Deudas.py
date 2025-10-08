@@ -138,7 +138,7 @@ if not pendientes.empty:
                 usuario=usuario_actual
             )
             st.success(f"✅ Pago registrado para {producto_sel}: ${monto_pago:,.2f}")
-            st.experimental_rerun()
+            st.rerun()
         except Exception as e:
             st.error(f"❌ Error al registrar pago: {str(e)}")
 else:

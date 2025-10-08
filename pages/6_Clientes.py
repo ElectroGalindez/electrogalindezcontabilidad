@@ -77,7 +77,7 @@ if clientes_filtrados:
         # Limpiar cache para mostrar los cambios inmediatamente
         if "cached_clients" in st.session_state:
             del st.session_state["cached_clients"]
-        st.experimental_rerun()
+        st.rerun()
 else:
     st.info("No hay clientes que coincidan con los filtros.")
 
@@ -110,7 +110,7 @@ with st.form("form_nuevo_cliente", clear_on_submit=True):
                     # Limpiar cache para mostrarlo inmediatamente
                     if "cached_clients" in st.session_state:
                         del st.session_state["cached_clients"]
-                    st.experimental_rerun()
+                    st.rerun()
                 else:
                     st.error("❌ No se pudo crear el cliente.")
             except Exception as e:
@@ -136,7 +136,7 @@ if opciones_clientes:
             # Limpiar cache para refrescar inmediatamente
             if "cached_clients" in st.session_state:
                 del st.session_state["cached_clients"]
-            st.experimental_rerun()
+            st.rerun()
         except Exception as e:
             st.error(f"❌ Error al eliminar cliente: {str(e)}")
 else:

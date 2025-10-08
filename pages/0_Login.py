@@ -18,7 +18,7 @@ if st.session_state.usuario:
     st.success(f"Bienvenido, {usuario['username']} ({usuario['rol']})")
     if st.button("Cerrar sesión"):
         st.session_state.usuario = None
-        st.experimental_rerun()
+        st.rerun()
 
 # Usuario no logueado
 else:
@@ -39,6 +39,6 @@ else:
         elif user:
             st.session_state.usuario = user
             st.success(f"✅ Bienvenido, {user['username']} ({user['rol']})")
-            st.experimental_rerun()
+            st.rerun()
         else:
             st.error("❌ Usuario o contraseña incorrectos")

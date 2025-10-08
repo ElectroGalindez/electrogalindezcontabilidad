@@ -71,7 +71,7 @@ with st.form("form_nuevo_cliente", clear_on_submit=True):
             )
             st.success(f"✅ Cliente '{nombre_nuevo}' creado")
             st.cache_data.clear()  # limpiar cache de clientes
-            st.experimental_rerun()
+            st.rerun()
 
 # =========================
 # 📦 Selección de productos
@@ -150,7 +150,7 @@ if st.session_state["items_venta"]:
         if st.button("🗑️ Vaciar orden", key="vaciar_orden"):
             st.session_state["items_venta"] = []
             st.success("🧹 Orden vaciada correctamente.")
-            st.experimental_rerun()
+            st.rerun()
 
     with col_b:
         if cliente_id:
@@ -193,7 +193,7 @@ if st.session_state["items_venta"]:
 
                         st.success(f"✅ Venta registrada ID {nueva_venta['id']} - Total ${nueva_venta['total']:.2f}")
                         st.session_state["items_venta"] = []
-                        st.experimental_rerun()
+                        st.rerun()
 
                     except Exception as e:
                         st.error(f"Error al registrar la venta: {str(e)}")
