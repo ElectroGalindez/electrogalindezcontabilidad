@@ -113,43 +113,36 @@ def delete_sale(sale_id: str, usuario: Optional[str] = None) -> bool:
 from io import BytesIO
 import pandas as pd
 
+from io import BytesIO
+import pandas as pd
+
 def generar_factura_excel(venta, cliente, productos_vendidos, gestor_info=None):
     """
-    Genera factura profesional en Excel lista para descargar o imprimir.
-    - venta: dict con info de la venta (número, fecha, total, pagos, observaciones)
-    - cliente: dict con info del cliente (nombre, carnet, identidad, chapa)
-    - productos_vendidos: lista de dicts {nombre, cantidad, precio_unitario, importe}
-    - gestor_info: dict opcional con datos del vendedor/gestor/chofer
+    Genera factura profesional en Excel (dos por hoja carta, media hoja cada una).
     """
     output = BytesIO()
+
     with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
         workbook = writer.book
+        worksheet = workbook.add_worksheet("Factura")
+        writer.sheets["Factura"] = worksheet
 
-        # Crear hoja de factura
-        sheet_name = "Factura"
-        worksheet = workbook.add_worksheet(sheet_name)
-        writer.sheets[sheet_name] = worksheet
-
-        # Formatos
+        # ======== FORMATOS ========
         bold = workbook.add_format({'bold': True})
         center = workbook.add_format({'align': 'center'})
         currency = workbook.add_format({'num_format': '$#,##0.00'})
+        wrap = workbook.add_format({'text_wrap': True, 'border': 1})
         border = workbook.add_format({'border': 1})
-        wrap = workbook.add_format({'text_wrap': True, 'border':1})
 
-        # Ajuste ancho columnas
-        worksheet.set_column('A:A', 25)
-        worksheet.set_column('B:B', 25)
-        worksheet.set_column('C:C', 15)
-        worksheet.set_column('D:D', 15)
-        worksheet.set_column('E:E', 15)
-        worksheet.set_column('F:F', 25)
+        worksheet.set_column('A:A', 22)
+        worksheet.set_column('B:B', 22)
+        worksheet.set_column('C:E', 15)
 
-        # Función para dibujar una factura (media hoja)
+        # ======== FUNCIÓN INTERNA ========
         def dibujar_factura(fila_inicio):
             row = fila_inicio
             # Encabezado empresa
-            worksheet.write(row, 0, "ElectroGalíndez S.A.", bold)
+            worksheet.write(row, 0, "ELECTROGALÍNDEZ", bold)
             worksheet.write(row, 3, f"Número: {venta.get('numero','')}")
             row += 1
             worksheet.write(row, 0, f"Fecha: {venta.get('fecha','')}")
@@ -169,49 +162,59 @@ def generar_factura_excel(venta, cliente, productos_vendidos, gestor_info=None):
             row += 2
 
             # Productos
-            df_prod = pd.DataFrame(productos_vendidos)
-            df_prod['importe'] = df_prod['cantidad'] * df_prod['precio_unitario']
-            df_prod.to_excel(writer, sheet_name=sheet_name, startrow=row, startcol=0, index=False)
-            row += len(df_prod) + 3
-
-            # Totales y pagos
-            worksheet.write(row, 0, "Total:", bold)
-            worksheet.write(row, 1, venta.get("total",""), currency)
+            columnas = ["Producto", "Cantidad", "Precio Unitario", "Importe"]
+            for col, nombre_col in enumerate(columnas):
+                worksheet.write(row, col, nombre_col, bold)
             row += 1
-            worksheet.write(row, 0, "Pagado:", bold)
-            worksheet.write(row, 1, venta.get("pagado",""), currency)
-            worksheet.write(row, 3, "Saldo Pendiente:", bold)
-            worksheet.write(row, 4, venta.get("saldo",""), currency)
+
+            for item in productos_vendidos:
+                worksheet.write(row, 0, item.get("nombre", ""), border)
+                worksheet.write(row, 1, item.get("cantidad", 0), border)
+                worksheet.write(row, 2, item.get("precio_unitario", 0), currency)
+                importe = item.get("cantidad", 0) * item.get("precio_unitario", 0)
+                worksheet.write(row, 3, importe, currency)
+                row += 1
+
+            row += 1
+            total = venta.get("total", 0)
+            worksheet.write(row, 2, "TOTAL:", bold)
+            worksheet.write(row, 3, total, currency)
             row += 2
 
-            # Desglose pago
+            # Pagos
+            worksheet.write(row, 0, "Pagado:", bold)
+            worksheet.write(row, 1, venta.get("pagado", 0), currency)
+            worksheet.write(row, 3, "Saldo:", bold)
+            worksheet.write(row, 4, venta.get("saldo", 0), currency)
+            row += 2
+
+            # Desglose de pago
             worksheet.write(row, 0, "Desglose de Pago:", bold)
-            row +=1
+            row += 1
             for metodo, monto in venta.get("desglose_pago", {}).items():
                 worksheet.write(row, 0, metodo)
                 worksheet.write(row, 1, monto, currency)
-                row +=1
+                row += 1
+            row += 1
 
             # Observaciones
             worksheet.write(row, 0, "Observaciones:", bold)
-            worksheet.write(row, 1, venta.get("observaciones",""), wrap)
+            worksheet.write(row, 1, venta.get("observaciones", ""), wrap)
             row += 2
 
-            # Vendedor / Chofer / Firma
+            # Gestor y firmas
             if gestor_info:
                 worksheet.write(row, 0, "Vendedor:", bold)
-                worksheet.write(row, 1, gestor_info.get("vendedor",""))
+                worksheet.write(row, 1, gestor_info.get("vendedor", ""))
                 worksheet.write(row, 3, "Chofer:", bold)
-                worksheet.write(row, 4, gestor_info.get("chofer",""))
-                row +=2
-                worksheet.write(row, 0, "Firma Cliente:", bold)
-                worksheet.write(row, 1, "")
-                worksheet.write(row, 3, "Firma Vendedor:", bold)
-                worksheet.write(row, 4, "")
+                worksheet.write(row, 4, gestor_info.get("chofer", ""))
+                row += 2
+            worksheet.write(row, 0, "Firma Cliente:", bold)
+            worksheet.write(row, 3, "Firma Vendedor:", bold)
 
         # Dibujar dos facturas por hoja
-        dibujar_factura(0)     # Primera mitad
-        dibujar_factura(30)    # Segunda mitad (ajustar según altura)
+        dibujar_factura(0)
+        dibujar_factura(32)  # segunda mitad ajustada
 
     output.seek(0)
     return output.getvalue()
