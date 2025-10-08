@@ -110,111 +110,120 @@ def delete_sale(sale_id: str, usuario: Optional[str] = None) -> bool:
     registrar_log(usuario or "sistema", "eliminar_venta", {"venta_id": sale_id, "venta": sale})
     return True
 
+def listar_ventas_dict():
+    ventas = list_sales()
+    ventas_dict = {f"ID {v['id']} - Cliente {v['cliente_id']} - Total ${v['total']}": v for v in ventas}
+    return ventas_dict
+
+
+
+
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
 from io import BytesIO
-import pandas as pd
 
-from io import BytesIO
-import pandas as pd
+def generar_factura_pdf(venta, cliente, productos_vendidos, gestor_info=None):
+    buffer = BytesIO()
+    c = canvas.Canvas(buffer, pagesize=letter)
+    width, height = letter
 
-def generar_factura_excel(venta, cliente, productos_vendidos, gestor_info=None):
-    """
-    Genera factura profesional en Excel (dos por hoja carta, media hoja cada una).
-    """
-    output = BytesIO()
+    margen_x = 40
+    y = height - 50
 
-    with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
-        workbook = writer.book
-        worksheet = workbook.add_worksheet("Factura")
-        writer.sheets["Factura"] = worksheet
+    # Encabezado
+    c.setFont("Helvetica-Bold", 14)
+    c.drawString(margen_x, y, "ElectroGalíndez S.A.")
+    y -= 20
+    c.setFont("Helvetica", 10)
+    c.drawString(margen_x, y, f"Factura N°: {venta.get('numero', venta.get('id','N/A'))}")
+    y -= 15
+    fecha = str(venta.get('fecha','N/A'))
+    c.drawString(margen_x, y, f"Fecha: {fecha}")
+    y -= 20
 
-        # ======== FORMATOS ========
-        bold = workbook.add_format({'bold': True})
-        center = workbook.add_format({'align': 'center'})
-        currency = workbook.add_format({'num_format': '$#,##0.00'})
-        wrap = workbook.add_format({'text_wrap': True, 'border': 1})
-        border = workbook.add_format({'border': 1})
+    # Datos del cliente (valores por defecto si faltan)
+    cliente_nombre = cliente.get("nombre", "N/A")
+    cliente_carnet = cliente.get("carnet", "N/A")
+    cliente_identidad = cliente.get("identidad", "N/A")
+    cliente_chapa = cliente.get("chapa", "N/A")
 
-        worksheet.set_column('A:A', 22)
-        worksheet.set_column('B:B', 22)
-        worksheet.set_column('C:E', 15)
+    c.setFont("Helvetica-Bold", 10)
+    c.drawString(margen_x, y, "Cliente:")
+    c.setFont("Helvetica", 10)
+    c.drawString(margen_x + 60, y, str(cliente_nombre))
+    y -= 15
+    c.setFont("Helvetica-Bold", 10)
+    c.drawString(margen_x, y, "Carnet/ID:")
+    c.setFont("Helvetica", 10)
+    c.drawString(margen_x + 60, y, str(cliente_carnet))
+    y -= 15
+    c.setFont("Helvetica-Bold", 10)
+    c.drawString(margen_x, y, "Identidad:")
+    c.setFont("Helvetica", 10)
+    c.drawString(margen_x + 60, y, str(cliente_identidad))
+    y -= 15
+    c.setFont("Helvetica-Bold", 10)
+    c.drawString(margen_x, y, "Chapa:")
+    c.setFont("Helvetica", 10)
+    c.drawString(margen_x + 60, y, str(cliente_chapa))
+    y -= 25
 
-        # ======== FUNCIÓN INTERNA ========
-        def dibujar_factura(fila_inicio):
-            row = fila_inicio
-            # Encabezado empresa
-            worksheet.write(row, 0, "ELECTROGALÍNDEZ", bold)
-            worksheet.write(row, 3, f"Número: {venta.get('numero','')}")
-            row += 1
-            worksheet.write(row, 0, f"Fecha: {venta.get('fecha','')}")
-            worksheet.write(row, 3, f"Proveedor: {venta.get('proveedor','')}")
-            row += 2
+    # Productos
+    c.setFont("Helvetica-Bold", 10)
+    c.drawString(margen_x, y, "Producto")
+    c.drawString(margen_x + 200, y, "Cantidad")
+    c.drawString(margen_x + 270, y, "Precio Unitario")
+    c.drawString(margen_x + 370, y, "Subtotal")
+    y -= 15
+    c.setFont("Helvetica", 10)
 
-            # Cliente
-            worksheet.write(row, 0, "Cliente:", bold)
-            worksheet.write(row, 1, cliente.get("nombre",""))
-            worksheet.write(row, 3, "Carnet/ID:", bold)
-            worksheet.write(row, 4, cliente.get("carnet",""))
-            row += 1
-            worksheet.write(row, 0, "Identidad:", bold)
-            worksheet.write(row, 1, cliente.get("identidad",""))
-            worksheet.write(row, 3, "Chapa:", bold)
-            worksheet.write(row, 4, cliente.get("chapa",""))
-            row += 2
+    if not productos_vendidos:
+        c.drawString(margen_x, y, "Ningún producto registrado")
+        y -= 15
+    else:
+        for p in productos_vendidos:
+            nombre = str(p.get("nombre", "N/A"))
+            cantidad = p.get("cantidad") or 0
+            precio = p.get("precio_unitario") or 0.0
+            subtotal = cantidad * precio
 
-            # Productos
-            columnas = ["Producto", "Cantidad", "Precio Unitario", "Importe"]
-            for col, nombre_col in enumerate(columnas):
-                worksheet.write(row, col, nombre_col, bold)
-            row += 1
+            c.drawString(margen_x, y, nombre)
+            c.drawString(margen_x + 200, y, str(cantidad))
+            c.drawString(margen_x + 270, y, f"${precio:.2f}")
+            c.drawString(margen_x + 370, y, f"${subtotal:.2f}")
+            y -= 15
 
-            for item in productos_vendidos:
-                worksheet.write(row, 0, item.get("nombre", ""), border)
-                worksheet.write(row, 1, item.get("cantidad", 0), border)
-                worksheet.write(row, 2, item.get("precio_unitario", 0), currency)
-                importe = item.get("cantidad", 0) * item.get("precio_unitario", 0)
-                worksheet.write(row, 3, importe, currency)
-                row += 1
+    y -= 10
+    # Totales (con valores por defecto)
+    total = venta.get('total') or 0.0
+    pagado = venta.get('pagado') or 0.0
+    saldo = venta.get('saldo') or 0.0
+    c.setFont("Helvetica-Bold", 10)
+    c.drawString(margen_x, y, f"Total: ${total:.2f}")
+    y -= 15
+    c.drawString(margen_x, y, f"Pagado: ${pagado:.2f}")
+    y -= 15
+    c.drawString(margen_x, y, f"Saldo pendiente: ${saldo:.2f}")
+    y -= 20
 
-            row += 1
-            total = venta.get("total", 0)
-            worksheet.write(row, 2, "TOTAL:", bold)
-            worksheet.write(row, 3, total, currency)
-            row += 2
+    # Método de pago
+    metodo = ", ".join(venta.get("desglose_pago", {}).keys()) or "N/A"
+    c.drawString(margen_x, y, f"Método de pago: {metodo}")
+    y -= 20
 
-            # Pagos
-            worksheet.write(row, 0, "Pagado:", bold)
-            worksheet.write(row, 1, venta.get("pagado", 0), currency)
-            worksheet.write(row, 3, "Saldo:", bold)
-            worksheet.write(row, 4, venta.get("saldo", 0), currency)
-            row += 2
+    # Observaciones
+    obs = venta.get("observaciones") or ""
+    if obs:
+        c.drawString(margen_x, y, f"Observaciones: {obs}")
+        y -= 20
 
-            # Desglose de pago
-            worksheet.write(row, 0, "Desglose de Pago:", bold)
-            row += 1
-            for metodo, monto in venta.get("desglose_pago", {}).items():
-                worksheet.write(row, 0, metodo)
-                worksheet.write(row, 1, monto, currency)
-                row += 1
-            row += 1
+    # Vendedor / Chofer
+    if gestor_info:
+        c.drawString(margen_x, y, f"Vendedor: {gestor_info.get('vendedor','N/A')}")
+        c.drawString(margen_x + 200, y, f"Chofer: {gestor_info.get('chofer','N/A')}")
+        y -= 20
 
-            # Observaciones
-            worksheet.write(row, 0, "Observaciones:", bold)
-            worksheet.write(row, 1, venta.get("observaciones", ""), wrap)
-            row += 2
-
-            # Gestor y firmas
-            if gestor_info:
-                worksheet.write(row, 0, "Vendedor:", bold)
-                worksheet.write(row, 1, gestor_info.get("vendedor", ""))
-                worksheet.write(row, 3, "Chofer:", bold)
-                worksheet.write(row, 4, gestor_info.get("chofer", ""))
-                row += 2
-            worksheet.write(row, 0, "Firma Cliente:", bold)
-            worksheet.write(row, 3, "Firma Vendedor:", bold)
-
-        # Dibujar dos facturas por hoja
-        dibujar_factura(0)
-        dibujar_factura(32)  # segunda mitad ajustada
-
-    output.seek(0)
-    return output.getvalue()
+    c.showPage()
+    c.save()
+    buffer.seek(0)
+    return buffer.getvalue()
