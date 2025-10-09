@@ -46,32 +46,34 @@ cliente_nombre = st.selectbox(
 )
 if cliente_nombre:
     cliente_id = clientes_dict[cliente_nombre]
+    
+# =========================
+# ➕ Crear nuevo cliente (plegable)
+# =========================
+with st.expander("➕ Crear nuevo cliente", expanded=False):
+    with st.form("form_nuevo_cliente", clear_on_submit=True):
+        nombre_nuevo = st.text_input("Nombre *")
+        direccion_nueva = st.text_input("Dirección")
+        telefono_nuevo = st.text_input("Teléfono")
+        ci_nuevo = st.text_input("CI")
+        chapa_nueva = st.text_input("Chapa")
 
-# =========================
-# ➕ Crear nuevo cliente
-# =========================
-st.subheader("Crear nuevo cliente")
-with st.form("form_nuevo_cliente", clear_on_submit=True):
-    nombre_nuevo = st.text_input("Nombre *")
-    direccion_nueva = st.text_input("Dirección")
-    telefono_nuevo = st.text_input("Teléfono")
-    ci_nuevo = st.text_input("CI")
-    chapa_nueva = st.text_input("Chapa")
-    submitted = st.form_submit_button("Crear cliente")
-    if submitted:
-        if not nombre_nuevo.strip():
-            st.error("❌ El nombre no puede estar vacío.")
-        else:
-            clientes.add_client(
-                nombre=nombre_nuevo,
-                direccion=direccion_nueva,
-                telefono=telefono_nuevo,
-                ci=ci_nuevo,
-                chapa=chapa_nueva
-            )
-            st.success(f"✅ Cliente '{nombre_nuevo}' creado")
-            st.cache_data.clear()  # limpiar cache de clientes
-            st.rerun()
+        submitted = st.form_submit_button("Crear cliente")
+        if submitted:
+            if not nombre_nuevo.strip():
+                st.error("❌ El nombre no puede estar vacío.")
+            else:
+                clientes.add_client(
+                    nombre=nombre_nuevo,
+                    direccion=direccion_nueva,
+                    telefono=telefono_nuevo,
+                    ci=ci_nuevo,
+                    chapa=chapa_nueva
+                )
+                st.success(f"✅ Cliente '{nombre_nuevo}' creado correctamente.")
+                st.cache_data.clear()  # limpiar cache de clientes
+                st.rerun()
+
 
 # =========================
 # 📦 Selección de productos
