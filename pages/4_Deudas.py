@@ -116,10 +116,9 @@ if not pendientes.empty:
 
     col1, col2 = st.columns(2)
     with col1:
+        st.write(f"💲 **Monto pendiente:** ${monto_max:,.2f}")
         st.write(f"🧾 **Deuda ID:** {deuda_id}")
         st.write(f"📦 **Producto:** {producto_sel}")
-    with col2:
-        st.write(f"💲 **Monto pendiente:** ${monto_max:,.2f}")
 
     monto_pago = st.number_input(
         "Monto a pagar",
@@ -143,3 +142,78 @@ if not pendientes.empty:
             st.error(f"❌ Error al registrar pago: {str(e)}")
 else:
     st.info("No hay productos pendientes de pago.")
+
+
+import json
+import pandas as pd
+import streamlit as st
+from backend import ventas, clientes
+
+st.subheader("📊 Tabla general de deudas por cliente y producto")
+
+# Obtener todas las ventas registradas
+ventas_data = ventas.list_sales()
+deudas_tabla = []
+
+for v in ventas_data:
+    cliente_id = v.get("cliente_id")
+    cliente = clientes.get_client(cliente_id)
+    nombre_cliente = cliente.get("nombre", "Desconocido") if cliente else "Sin datos"
+
+    productos_vendidos = v.get("productos_vendidos", [])
+
+    # ✅ Cargar si es texto JSON
+    if isinstance(productos_vendidos, str):
+        try:
+            productos_vendidos = json.loads(productos_vendidos)
+        except json.JSONDecodeError:
+            productos_vendidos = []
+
+    # Si no hay productos, saltar
+    if not productos_vendidos:
+        continue
+
+    # Buscar si hay algún producto con saldo o monto pendiente
+    for p in productos_vendidos:
+        nombre_prod = p.get("nombre") or p.get("producto") or "N/A"
+        cantidad = float(p.get("cantidad") or p.get("cant") or 0)
+        precio = float(p.get("precio_unitario") or p.get("precio") or 0)
+        subtotal = cantidad * precio
+
+        # 💡 Si existe saldo o el total de la venta es mayor a lo pagado, es deuda
+        total_venta = float(v.get("total", 0) or 0)
+        pagado = float(v.get("pagado", 0) or 0)
+        saldo = float(v.get("saldo", 0) or (total_venta - pagado))
+
+        if saldo > 0 or subtotal > 0:
+            deudas_tabla.append({
+                "Cliente": nombre_cliente,
+                "Venta ID": v.get("id"),
+                "Producto": nombre_prod,
+                "Cantidad": cantidad,
+                "Precio Unitario": precio,
+                "Pagado": pagado,
+                "Saldo Pendiente": saldo,
+                "Fecha": str(v.get("fecha", ""))[:19]
+            })
+
+# Mostrar tabla si hay deudas
+if deudas_tabla:
+    df = pd.DataFrame(deudas_tabla)
+    df = df[df["Saldo Pendiente"] > 0]  # Mostrar solo las deudas reales
+    if not df.empty:
+        st.dataframe(
+            df.style.format({
+                "Cantidad": "{:,.0f}",
+                "Precio Unitario": "${:.2f}",
+                "Subtotal": "${:.2f}",
+                "Pagado": "${:.2f}",
+                "Saldo Pendiente": "${:.2f}",
+            }),
+            use_container_width=True,
+            height=500
+        )
+    else:
+        st.info("✅ No hay deudas pendientes registradas.")
+else:
+    st.info("✅ No hay deudas pendientes registradas.")
