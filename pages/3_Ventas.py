@@ -46,7 +46,7 @@ cliente_nombre = st.selectbox(
 )
 if cliente_nombre:
     cliente_id = clientes_dict[cliente_nombre]
-    
+
 # =========================
 # ➕ Crear nuevo cliente (plegable)
 # =========================
@@ -201,59 +201,59 @@ if st.session_state["items_venta"]:
                         st.error(f"Error al registrar la venta: {str(e)}")
 
 
-import streamlit as st
-from backend import ventas, clientes
-from io import BytesIO
 
-# =========================
-# Función de cache para ventas y clientes
-# =========================
-@st.cache_data(ttl=15)
-def cached_ventas_dict():
-    ventas_data = ventas.list_sales()
-    # Genera un diccionario de opciones legibles
-    return {f"ID {v['id']} - Cliente {v.get('cliente_id','N/A')} - Total ${v.get('total',0):.2f}": v for v in ventas_data}
-
-@st.cache_data(ttl=15)
-def cached_cliente(cliente_id):
-    return clientes.get_client(cliente_id)
-
-# imports al inicio del archivo
 import streamlit as st
 from backend.ventas import generar_factura_pdf
-from backend.clientes import get_client, list_clients
-from backend.ventas import list_sales
+from backend.clientes import get_client
+from backend import ventas
 
-# ---------------------------
-# Cache para generar PDF
-# ---------------------------
-@st.cache_data(ttl=30)
-def generar_pdf(venta, cliente, productos):
-    return generar_factura_pdf(venta, cliente, productos)
-
-# ---------------------------
-# Interfaz Streamlit
-# ---------------------------
 st.title("💳 Generar Factura Profesional en PDF")
 
-ventas_dict = cached_ventas_dict()
+# ---------------------------
+# Selección de venta
+# ---------------------------
+ventas_dict = {f"ID {v['id']} - Cliente {v.get('cliente_id','N/A')} - Total ${v.get('total',0):.2f}": v for v in ventas.list_sales()}
 venta_keys = [""] + list(ventas_dict.keys())
 venta_sel = st.selectbox("Selecciona venta", venta_keys)
 
 if venta_sel:
     venta_obj = ventas_dict[venta_sel]
-    cliente_obj = cached_cliente(venta_obj.get("cliente_id"))
+    cliente_obj = get_client(venta_obj.get("cliente_id"))
 
     if cliente_obj is None:
         st.error(f"❌ No se encontró el cliente con ID {venta_obj.get('cliente_id')}")
     else:
         productos_vendidos = venta_obj.get("productos_vendidos", [])
-        
-        pdf_bytes = generar_pdf(venta_obj, cliente_obj, productos_vendidos)
 
-        st.download_button(
-            label="⬇️ Descargar factura PDF",
-            data=pdf_bytes,
-            file_name=f"Factura_{venta_obj.get('id')}.pdf",
-            mime="application/pdf"
-        )
+        # ---------------------------
+        # Formulario fijo para campos faltantes
+        # ---------------------------
+        observaciones = st.text_area("Observaciones", value=venta_obj.get("observaciones",""))
+        vendedor = st.text_input("Vendedor", value=venta_obj.get("vendedor",""))
+        telefono_vendedor = st.text_input("Teléfono del Vendedor", value=venta_obj.get("telefono_vendedor",""))
+        chofer = st.text_input("Chofer", value=venta_obj.get("chofer",""))
+        chapa_nueva = st.text_input("Chapa", value=venta_obj.get("chapa",""))
+
+        # ---------------------------
+        # Botón único para generar y descargar PDF
+        # ---------------------------
+        if st.button("📄 Generar y Descargar Factura PDF"):
+            # Guardar temporalmente los datos en venta_obj
+            venta_obj["observaciones"] = observaciones
+            venta_obj["vendedor"] = vendedor
+            venta_obj["telefono_vendedor"] = telefono_vendedor
+            venta_obj["chofer"] = chofer
+
+            gestor_info = {
+                "vendedor": f"{vendedor} (+53 {telefono_vendedor})",
+                "chofer": chofer,
+                "chapa": chapa_nueva
+            }
+            pdf_bytes = generar_factura_pdf(venta_obj, cliente_obj, productos_vendidos, gestor_info=gestor_info)
+
+            st.download_button(
+                label="⬇️ Descargar Factura PDF",
+                data=pdf_bytes,
+                file_name=f"Factura_{venta_obj.get('id')}.pdf",
+                mime="application/pdf"
+            )
