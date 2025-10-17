@@ -222,6 +222,14 @@ else:
 # 📥 Botón para descargar tabla de deudas del cliente actual en Excel
 # =============================
 from io import BytesIO
+# =============================
+# Corregir formato de fecha
+# =============================
+if "Fecha" in df_detalle.columns:
+    df_detalle["Fecha"] = pd.to_datetime(df_detalle["Fecha"], errors="coerce")
+    df_detalle["Fecha"] = df_detalle["Fecha"].dt.strftime("%Y-%m-%d")
+    df_detalle["Hora"] = df_detalle["Hora"].fillna("").astype(str)
+
 
 excel_buffer = BytesIO()
 with pd.ExcelWriter(excel_buffer, engine="xlsxwriter") as writer:
