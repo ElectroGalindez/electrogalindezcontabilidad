@@ -217,3 +217,38 @@ if deudas_tabla:
         st.info("✅ No hay deudas pendientes registradas.")
 else:
     st.info("✅ No hay deudas pendientes registradas.")
+
+# =============================
+# 📥 Botón para descargar tabla de deudas del cliente actual en Excel
+# =============================
+from io import BytesIO
+
+excel_buffer = BytesIO()
+with pd.ExcelWriter(excel_buffer, engine="xlsxwriter") as writer:
+    df_detalle.to_excel(writer, index=False, sheet_name="DeudasCliente")
+excel_data = excel_buffer.getvalue()
+
+st.download_button(
+    label="⬇️ Descargar deudas del cliente (Excel)",
+    data=excel_data,
+    file_name=f"deudas_cliente_{cliente_obj['nombre'].replace(' ', '_')}.xlsx",
+    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    key="descargar_cliente_excel"
+)
+# =============================
+# 📥 Botón para descargar tabla general en Excel
+# =============================
+from io import BytesIO
+
+excel_buffer_general = BytesIO()
+with pd.ExcelWriter(excel_buffer_general, engine="xlsxwriter") as writer:
+    df.to_excel(writer, index=False, sheet_name="DeudasGenerales")
+excel_data_general = excel_buffer_general.getvalue()
+
+st.download_button(
+    label="⬇️ Descargar tabla general de deudas (Excel)",
+    data=excel_data_general,
+    file_name="deudas_generales.xlsx",
+    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    key="descargar_general_excel"
+)
