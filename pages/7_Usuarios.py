@@ -1,7 +1,7 @@
 # pages/6_Usuarios.py
 import streamlit as st
 from backend.usuarios import (
-    listar_usuarios, crear_usuario, cambiar_rol, activar_usuario, desactivar_usuario, cambiar_password, obtener_logs_usuario, activar_usuario, desactivar_usuario
+    listar_usuarios, crear_usuario, cambiar_rol, activar_usuario, desactivar_usuario, cambiar_password, obtener_logs_usuario, eliminar_usuario
 )
 
 
@@ -117,3 +117,11 @@ if usernames:
             st.rerun()
 else:
     st.info("No hay usuarios activos para modificar.")
+
+#selector para eliinar usuario
+st.divider()
+usuario_a_eliminar = st.selectbox("Selecciona usuario a eliminar", usernames)
+if st.button("Eliminar usuario"):
+    eliminar_usuario(usuario_a_eliminar, actor=st.session_state.usuario["username"])
+    st.success("Usuario eliminado ✅")
+    st.rerun()

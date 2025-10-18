@@ -150,3 +150,12 @@ def desactivar_usuario(username, actor=None):
     return set_estado_usuario(username, False, actor)
 
 # --------------------------------------------
+def eliminar_usuario(username, actor=None):
+    """Elimina un usuario de la base de datos."""
+    with engine.begin() as conn:
+        conn.execute(
+            text("DELETE FROM usuarios WHERE username=:u"),
+            {"u": username}
+        )
+    registrar_log(usuario=actor or username, accion="eliminar_usuario", detalles={"username": username})
+    return True 
