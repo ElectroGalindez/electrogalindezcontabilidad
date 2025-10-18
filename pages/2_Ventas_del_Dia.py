@@ -150,9 +150,33 @@ st.metric("Productos vendidos", f"{df_ventas['Cantidad'].sum():,.0f}")
 st.metric("Total pagado", f"${df_ventas['Pagado'].sum():,.2f}")
 st.metric("Deuda total", f"${df_ventas['Saldo Pendiente'].sum():,.2f}")
 
-#tabla q muestra la cantidad de productos vendidos en el dia 
 
+#tabla de cantidad de equipos vendidos por productos
+st.subheader("📦 Cantidad de Productos Vendidos")
+tabla_productos_vendidos = df_ventas.groupby("Producto")["Cantidad"].sum().reset_index()
+tabla_productos_vendidos = tabla_productos_vendidos.sort_values("Cantidad", ascending=False)
+st.dataframe(tabla_productos_vendidos, use_container_width=True)
 
+#boton de descarga de excel de cantidad de productos vendidos solo de las columnas Producto y Cantidad
+def descargar_excel_productos_vendidos(df: pd.DataFrame, nombre_archivo: str):
+    """
+    Descarga un DataFrame como Excel, quitando la columna 'Subtotal' y formateando fechas.
+    """
+    df_export = df[["Producto", "Cantidad"]].copy()
+    
+    # 🔹 Crear buffer Excel
+    buffer = BytesIO()
+    with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
+        df_export.to_excel(writer, index=False, sheet_name="Productos Vendidos")
+    
+    # 🔹 Botón de descarga
+    st.download_button(
+        label=f"💾 Descargar {nombre_archivo}",
+        data=buffer.getvalue(),
+        file_name=f"{nombre_archivo}.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+descargar_excel_productos_vendidos(tabla_productos_vendidos, f"productos_vendidos_{fecha_inicio}_{fecha_fin}")
 
 # ---------------------------
 # Botones de descarga Excel
