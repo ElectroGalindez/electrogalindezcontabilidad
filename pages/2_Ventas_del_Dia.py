@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 from io import BytesIO
-from backend import ventas, clientes
+from backend import ventas, clientes, productos 
 import numpy as np
 
 st.set_page_config(page_title="Ventas del Día", layout="wide")
@@ -150,12 +150,51 @@ st.metric("Productos vendidos", f"{df_ventas['Cantidad'].sum():,.0f}")
 st.metric("Total pagado", f"${df_ventas['Pagado'].sum():,.2f}")
 st.metric("Deuda total", f"${df_ventas['Saldo Pendiente'].sum():,.2f}")
 
+import pandas as pd
+import streamlit as st
 
-#tabla de cantidad de equipos vendidos por productos
-st.subheader("📦 Cantidad de Productos Vendidos")
-tabla_productos_vendidos = df_ventas.groupby("Producto")["Cantidad"].sum().reset_index()
-tabla_productos_vendidos = tabla_productos_vendidos.sort_values("Cantidad", ascending=False)
-st.dataframe(tabla_productos_vendidos, use_container_width=True)
+st.subheader("🏆 Productos Más Vendidos (según precio del inventario)")
+
+# ---------------------------
+# Cargar tabla de productos y renombrar columnas
+productos_data = productos.list_products()  # tu función para obtener productos
+df_productos = pd.DataFrame(productos_data).rename(columns={"nombre": "Producto", "precio": "Precio"})
+
+# Convertir Precio a float (de Decimal a float)
+df_productos["Precio"] = df_productos["Precio"].apply(float)
+
+# ---------------------------
+# Agrupar ventas por producto
+productos_vendidos = df_ventas.groupby("Producto")["Cantidad"].sum().reset_index()
+
+# ---------------------------
+# Unir con tabla de productos para obtener precio actual
+productos_vendidos = productos_vendidos.merge(
+    df_productos[["Producto", "Precio"]],
+    on="Producto",
+    how="left"
+)
+
+# ---------------------------
+# Asegurarse de que Cantidad sea float
+productos_vendidos["Cantidad"] = productos_vendidos["Cantidad"].astype(float)
+
+# ---------------------------
+# Calcular total vendido
+productos_vendidos["Total Vendido"] = productos_vendidos["Cantidad"] * productos_vendidos["Precio"]
+
+# ---------------------------
+# Ordenar por cantidad vendida
+productos_vendidos = productos_vendidos.sort_values("Cantidad", ascending=False)
+
+# ---------------------------
+# Formatear valores monetarios
+productos_vendidos["Precio"] = productos_vendidos["Precio"].apply(lambda x: f"${x:,.2f}")
+productos_vendidos["Total Vendido"] = productos_vendidos["Total Vendido"].apply(lambda x: f"${x:,.2f}")
+
+# ---------------------------
+# Mostrar tabla
+st.dataframe(productos_vendidos, use_container_width=True, hide_index=True)
 
 #boton de descarga de excel de cantidad de productos vendidos solo de las columnas Producto y Cantidad
 def descargar_excel_productos_vendidos(df: pd.DataFrame, nombre_archivo: str):
@@ -176,8 +215,7 @@ def descargar_excel_productos_vendidos(df: pd.DataFrame, nombre_archivo: str):
         file_name=f"{nombre_archivo}.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
-descargar_excel_productos_vendidos(tabla_productos_vendidos, f"productos_vendidos_{fecha_inicio}_{fecha_fin}")
-
+descargar_excel_productos_vendidos(productos_vendidos, f"productos_vendidos_{fecha_inicio}_{fecha_fin}")
 # ---------------------------
 # Botones de descarga Excel
 # ---------------------------
