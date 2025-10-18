@@ -218,31 +218,57 @@ if deudas_tabla:
 else:
     st.info("✅ No hay deudas pendientes registradas.")
 
+
 # =============================
-# 📥 Botón para descargar tabla de deudas del cliente actual en Excel
+#  📥 Botón para descargar deudas del cliente en Excel
 # =============================
+
 from io import BytesIO
+import pandas as pd
+
 # =============================
-# Corregir formato de fecha
+# 🧹 Limpieza y formateo de la fecha
 # =============================
 if "Fecha" in df_detalle.columns:
+    # Convierte a tipo datetime sin errores
     df_detalle["Fecha"] = pd.to_datetime(df_detalle["Fecha"], errors="coerce")
+    # Formato visible (YYYY-MM-DD)
     df_detalle["Fecha"] = df_detalle["Fecha"].dt.strftime("%Y-%m-%d")
+
+if "Hora" in df_detalle.columns:
+    # Asegura que sea texto
     df_detalle["Hora"] = df_detalle["Hora"].fillna("").astype(str)
 
-
-excel_buffer = BytesIO()
-with pd.ExcelWriter(excel_buffer, engine="xlsxwriter") as writer:
+# =============================
+# 📥 Exportar a Excel
+# =============================
+excel_buffer_cliente = BytesIO()
+with pd.ExcelWriter(excel_buffer_cliente, engine="xlsxwriter") as writer:
     df_detalle.to_excel(writer, index=False, sheet_name="DeudasCliente")
-excel_data = excel_buffer.getvalue()
 
+    workbook = writer.book
+    worksheet = writer.sheets["DeudasCliente"]
+
+    # Aplica formato de fecha solo si existe la columna
+    if "Fecha" in df_detalle.columns:
+        date_format = workbook.add_format({"num_format": "yyyy-mm-dd"})
+        col_idx = df_detalle.columns.get_loc("Fecha")
+        worksheet.set_column(col_idx, col_idx, 15, date_format)
+
+excel_data_cliente = excel_buffer_cliente.getvalue()
+
+# =============================
+# 📎 Botón de descarga
+# =============================
 st.download_button(
     label="⬇️ Descargar deudas del cliente (Excel)",
-    data=excel_data,
-    file_name=f"deudas_cliente_{cliente_obj['nombre'].replace(' ', '_')}.xlsx",
+    data=excel_data_cliente,
+    file_name=f"deudas_cliente_{cliente_id}.xlsx",
     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     key="descargar_cliente_excel"
 )
+
+
 # =============================
 # 📥 Botón para descargar tabla general en Excel
 # =============================
@@ -256,7 +282,7 @@ excel_data_general = excel_buffer_general.getvalue()
 st.download_button(
     label="⬇️ Descargar tabla general de deudas (Excel)",
     data=excel_data_general,
-    file_name="deudas_generales.xlsx",
+    file_name=f"deudas_generales.xlsx",
     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     key="descargar_general_excel"
 )

@@ -150,6 +150,10 @@ st.metric("Productos vendidos", f"{df_ventas['Cantidad'].sum():,.0f}")
 st.metric("Total pagado", f"${df_ventas['Pagado'].sum():,.2f}")
 st.metric("Deuda total", f"${df_ventas['Saldo Pendiente'].sum():,.2f}")
 
+#tabla q muestra la cantidad de productos vendidos en el dia 
+
+
+
 # ---------------------------
 # Botones de descarga Excel
 # ---------------------------
