@@ -1,9 +1,9 @@
 # pages/6_Usuarios.py
 import streamlit as st
 from backend.usuarios import (
-    listar_usuarios, crear_usuario, cambiar_password, cambiar_rol,
-    desactivar_usuario, activar_usuario, obtener_logs_usuario
+    listar_usuarios, crear_usuario, cambiar_rol, activar_usuario, desactivar_usuario, cambiar_password, obtener_logs_usuario, activar_usuario, desactivar_usuario
 )
+
 
 st.set_page_config(page_title="Gestión de Usuarios", layout="wide")
 st.title("👤 Gestión de Usuarios")
