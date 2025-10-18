@@ -196,26 +196,27 @@ productos_vendidos["Total Vendido"] = productos_vendidos["Total Vendido"].apply(
 # Mostrar tabla
 st.dataframe(productos_vendidos, use_container_width=True, hide_index=True)
 
-#boton de descarga de excel de cantidad de productos vendidos solo de las columnas Producto y Cantidad
-def descargar_excel_productos_vendidos(df: pd.DataFrame, nombre_archivo: str):
-    """
-    Descarga un DataFrame como Excel, quitando la columna 'Subtotal' y formateando fechas.
-    """
-    df_export = df[["Producto", "Cantidad"]].copy()
-    
-    # 🔹 Crear buffer Excel
-    buffer = BytesIO()
-    with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
-        df_export.to_excel(writer, index=False, sheet_name="Productos Vendidos")
-    
-    # 🔹 Botón de descarga
-    st.download_button(
-        label=f"💾 Descargar {nombre_archivo}",
-        data=buffer.getvalue(),
-        file_name=f"{nombre_archivo}.xlsx",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    )
-descargar_excel_productos_vendidos(productos_vendidos, f"productos_vendidos_{fecha_inicio}_{fecha_fin}")
+import pandas as pd
+from io import BytesIO
+import streamlit as st
+
+# --- Seleccionar columnas para exportar ---
+export_columns = ["Producto", "Cantidad", "Total Vendido"]
+df_export = productos_vendidos[export_columns].copy()
+
+# --- Crear buffer en memoria ---
+excel_buffer = BytesIO()
+with pd.ExcelWriter(excel_buffer, engine="xlsxwriter") as writer:
+    df_export.to_excel(writer, index=False, sheet_name="Productos Vendidos")
+
+# --- Botón de descarga ---
+st.download_button(
+    label="📥 Descargar Excel",
+    data=excel_buffer.getvalue(),
+    file_name="productos_vendidos .xlsx",
+    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+)
+
 # ---------------------------
 # Botones de descarga Excel
 # ---------------------------
