@@ -8,6 +8,16 @@ from io import BytesIO
 st.set_page_config(page_title="Historial de Acciones", layout="wide")
 st.title("📜 Historial de Acciones")
 
+# ---------------------------
+# Verificar sesión y rol
+# ---------------------------
+if "usuario" not in st.session_state or st.session_state.usuario is None:
+    st.warning("Debes iniciar sesión para acceder a esta página.")
+    st.stop()
+if st.session_state.usuario["rol"] != "admin":
+    st.error("Solo usuarios con rol admin pueden acceder.")
+    st.stop()
+
 # =============================
 # 🧠 Carga de datos (ejemplo)
 # =============================

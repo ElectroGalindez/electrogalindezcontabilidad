@@ -10,10 +10,13 @@ st.set_page_config(page_title="🧾 Auditoría del Sistema", layout="wide")
 st.title("🧾 Auditoría del Sistema")
 
 # ---------------------------
-# Seguridad
+# Verificar sesión y rol
 # ---------------------------
 if "usuario" not in st.session_state or st.session_state.usuario is None:
     st.warning("Debes iniciar sesión para acceder a esta página.")
+    st.stop()
+if st.session_state.usuario["rol"] != "admin":
+    st.error("Solo usuarios con rol admin pueden acceder.")
     st.stop()
 
 # ---------------------------
