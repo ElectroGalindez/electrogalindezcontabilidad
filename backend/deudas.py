@@ -200,3 +200,31 @@ def delete_debt(deuda_id: int, usuario: Optional[str] = None) -> bool:
         pass
 
     return True
+
+# ======================================================
+# 📊 Listar todos los detalles de deudas (deudas_detalle)
+# ======================================================
+def list_detalle_deudas():
+    """
+    Devuelve una lista de todos los detalles de deuda, 
+    incluyendo datos del cliente, monto, estado y fecha.
+    """
+    query = text("""
+        SELECT 
+            dd.id AS detalle_id,
+            dd.deuda_id,
+            dd.producto_id,
+            dd.cantidad,
+            dd.precio_unitario,
+            dd.estado,
+            d.cliente_id,
+            d.fecha,
+            d.monto_total,
+            d.estado AS estado_deuda
+        FROM deudas_detalle dd
+        JOIN deudas d ON d.id = dd.deuda_id
+        ORDER BY d.fecha DESC
+    """)
+    with engine.connect() as conn:
+        result = conn.execute(query)
+        return [dict(row._mapping) for row in result]
