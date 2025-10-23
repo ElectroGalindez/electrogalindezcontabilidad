@@ -46,9 +46,27 @@ if not clientes_con_deuda:
 # =============================
 # SELECCIÓN DE CLIENTE
 # =============================
-cliente_opciones = [f"{c['id']} - {c['nombre']}" for c in clientes_con_deuda]
-cliente_sel = st.selectbox("👤 Seleccionar Cliente", cliente_opciones, key="cliente_sel")
-cliente_id = int(cliente_sel.split(" - ")[0])
+# Crear diccionario nombre → id
+clientes_opciones = {c["nombre"]: c["id"] for c in clientes_con_deuda}
+
+# Agregar opción inicial vacía
+nombres_clientes = [""] + list(clientes_opciones.keys())
+
+cliente_sel_nombre = st.selectbox(
+    "👤 Seleccionar Cliente",
+    nombres_clientes,
+    index=0,
+    key="cliente_sel",
+    help="Busca un cliente por nombre"
+)
+
+# Si no ha seleccionado cliente, detener
+if not cliente_sel_nombre:
+    st.info("🔍 Selecciona un cliente para ver sus deudas.")
+    st.stop()
+
+# Obtener ID y datos del cliente seleccionado
+cliente_id = clientes_opciones[cliente_sel_nombre]
 cliente_obj = clientes.get_client(cliente_id)
 deuda_total = float(cliente_obj.get("deuda_total", 0.0) or 0.0)
 
@@ -56,7 +74,6 @@ st.markdown(
     f"<h4>💰 Deuda total actual: <span style='color:#c0392b;'>${deuda_total:,.2f}</span></h4>",
     unsafe_allow_html=True
 )
-
 # =============================
 # LISTAR DEUDAS POR CLIENTE
 # =============================
