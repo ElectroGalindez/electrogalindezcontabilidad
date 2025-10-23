@@ -39,17 +39,10 @@ productos_map = {p["id"]: p["nombre"] for p in productos_data}
 # =============================
 clientes_con_deuda = [c for c in clientes_data if float(c.get("deuda_total", 0) or 0) > 0]
 
-if not clientes_con_deuda:
-    st.info("🎉 No hay clientes con deuda pendiente.")
-    st.stop()
-
 # =============================
 # SELECCIÓN DE CLIENTE
 # =============================
-# Crear diccionario nombre → id
 clientes_opciones = {c["nombre"]: c["id"] for c in clientes_con_deuda}
-
-# Agregar opción inicial vacía
 nombres_clientes = [""] + list(clientes_opciones.keys())
 
 cliente_sel_nombre = st.selectbox(
@@ -60,20 +53,23 @@ cliente_sel_nombre = st.selectbox(
     help="Busca un cliente por nombre"
 )
 
-# Si no ha seleccionado cliente, detener
-if not cliente_sel_nombre:
-    st.info("🔍 Selecciona un cliente para ver sus deudas.")
-    st.stop()
+cliente_id = None
+cliente_obj = None
+deuda_total = 0.0
 
-# Obtener ID y datos del cliente seleccionado
-cliente_id = clientes_opciones[cliente_sel_nombre]
-cliente_obj = clientes.get_client(cliente_id)
-deuda_total = float(cliente_obj.get("deuda_total", 0.0) or 0.0)
+if cliente_sel_nombre:
+    # Si hay cliente seleccionado, obtenemos su ID y datos
+    cliente_id = clientes_opciones[cliente_sel_nombre]
+    cliente_obj = clientes.get_client(cliente_id)
+    deuda_total = float(cliente_obj.get("deuda_total", 0.0) or 0.0)
 
-st.markdown(
-    f"<h4>💰 Deuda total actual: <span style='color:#c0392b;'>${deuda_total:,.2f}</span></h4>",
-    unsafe_allow_html=True
-)
+    st.markdown(
+        f"<h4>💰 Deuda total actual: <span style='color:#c0392b;'>${deuda_total:,.2f}</span></h4>",
+        unsafe_allow_html=True
+    )
+else:
+    st.markdown("### 💬 No se ha seleccionado un cliente específico.")
+
 # =============================
 # LISTAR DEUDAS POR CLIENTE
 # =============================
@@ -121,50 +117,51 @@ else:
 # =============================
 # REGISTRAR PAGO POR PRODUCTO
 # =============================
-pendientes = df_detalle[df_detalle["Estado"].str.lower() == "pendiente"]
+if not df_detalle.empty:
+    pendientes = df_detalle[df_detalle["Estado"].str.lower() == "pendiente"]
 
-if not pendientes.empty:
-    st.divider()
-    st.subheader("💵 Registrar Pago por Producto")
+    if not pendientes.empty:
+        st.divider()
+        st.subheader("💵 Registrar Pago por Producto")
 
-    producto_sel = st.selectbox(
-        "Seleccionar producto a pagar",
-        pendientes["Producto"].unique()
-    )
+        producto_sel = st.selectbox(
+            "Seleccionar producto a pagar",
+            pendientes["Producto"].unique()
+        )
 
-    fila_producto = pendientes[pendientes["Producto"] == producto_sel].iloc[0]
-    deuda_id = int(fila_producto["Deuda ID"])
-    producto_id = int(fila_producto["Producto ID"])
-    monto_max = float(fila_producto["Monto Total"])
+        fila_producto = pendientes[pendientes["Producto"] == producto_sel].iloc[0]
+        deuda_id = int(fila_producto["Deuda ID"])
+        producto_id = int(fila_producto["Producto ID"])
+        monto_max = float(fila_producto["Monto Total"])
 
-    col1, col2 = st.columns(2)
-    with col1:
-        st.write(f"💲 **Monto pendiente:** ${monto_max:,.2f}")
-        st.write(f"🧾 **Deuda ID:** {deuda_id}")
-        st.write(f"📦 **Producto:** {producto_sel}")
+        col1, col2 = st.columns(2)
+        with col1:
+            st.write(f"💲 **Monto pendiente:** ${monto_max:,.2f}")
+            st.write(f"🧾 **Deuda ID:** {deuda_id}")
+            st.write(f"📦 **Producto:** {producto_sel}")
 
-    monto_pago = st.number_input(
-        "Monto a pagar",
-        min_value=0.0,
-        max_value=monto_max,
-        step=0.01,
-        value=monto_max
-    )
+        monto_pago = st.number_input(
+            "Monto a pagar",
+            min_value=0.0,
+            max_value=monto_max,
+            step=0.01,
+            value=monto_max
+        )
 
-    if st.button("💰 Registrar pago del producto"):
-        try:
-            resultado = deudas.pay_debt_producto(
-                deuda_id,
-                producto_id,
-                monto_pago,
-                usuario=usuario_actual
-            )
-            st.success(f"✅ Pago registrado para {producto_sel}: ${monto_pago:,.2f}")
-            st.rerun()
-        except Exception as e:
-            st.error(f"❌ Error al registrar pago: {str(e)}")
-else:
-    st.info("No hay productos pendientes de pago.")
+        if st.button("💰 Registrar pago del producto"):
+            try:
+                resultado = deudas.pay_debt_producto(
+                    deuda_id,
+                    producto_id,
+                    monto_pago,
+                    usuario=usuario_actual
+                )
+                st.success(f"✅ Pago registrado para {producto_sel}: ${monto_pago:,.2f}")
+                st.rerun()
+            except Exception as e:
+                st.error(f"❌ Error al registrar pago: {str(e)}")
+    else:
+        st.info("No hay productos pendientes de pago.")
 
 # =============================
 # DESCARGA DE DEUDAS DEL CLIENTE
@@ -191,16 +188,20 @@ st.subheader("📊 Todas las Deudas Pendientes (Clientes y Productos)")
 
 detalles_totales = deudas.list_detalle_deudas() or []
 filas_totales = []
+
 for d in detalles_totales:
     cantidad = float(d.get("cantidad") or 0)
     precio_unitario = float(d.get("precio_unitario") or 0)
     monto_total = cantidad * precio_unitario
     estado_det = str(d.get("estado") or "pendiente").lower()
+
     if estado_det != "pendiente":
-        continue  # solo pendientes
+        continue  
+
     cliente_id_d = d.get("cliente_id")
     cliente = clientes.get_client(cliente_id_d)
     nombre_cliente = cliente.get("nombre", "Desconocido") if cliente else "Sin datos"
+
     filas_totales.append({
         "Cliente": nombre_cliente,
         "Deuda ID": d.get("deuda_id"),
@@ -214,6 +215,16 @@ for d in detalles_totales:
     })
 
 df_totales = pd.DataFrame(filas_totales)
+
+# 💰 Resumen global
+if not df_totales.empty:
+    total_general = df_totales["Monto Total"].sum()
+    st.markdown(
+        f"### 💰 Total general pendiente: <span style='color:#c0392b;'>${total_general:,.2f}</span>",
+        unsafe_allow_html=True
+    )
+
+# Mostrar la tabla SIEMPRE
 if not df_totales.empty:
     st.dataframe(
         df_totales.sort_values(["Fecha", "Cliente"], ascending=[False, True])
@@ -228,19 +239,18 @@ if not df_totales.empty:
 else:
     st.info("✅ No hay deudas pendientes registradas.")
 
-# =============================
 # DESCARGA TABLA GENERAL
-# =============================
 if not df_totales.empty:
     excel_buffer_general = BytesIO()
     with pd.ExcelWriter(excel_buffer_general, engine="xlsxwriter") as writer:
         df_totales.to_excel(writer, index=False, sheet_name="DeudasGenerales")
+
     excel_data_general = excel_buffer_general.getvalue()
 
     st.download_button(
         label="⬇️ Descargar tabla general de deudas (Excel)",
         data=excel_data_general,
-        file_name=f"deudas_generales.xlsx",
+        file_name="deudas_generales.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         key="descargar_general_excel"
     )
