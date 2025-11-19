@@ -228,3 +228,23 @@ def list_detalle_deudas():
     with engine.connect() as conn:
         result = conn.execute(query)
         return [dict(row._mapping) for row in result]
+
+
+# ======================================================
+# 📋 Listar clientes con deudas pendiente
+# ======================================================
+def list_clientes_con_deuda():
+    """
+    Devuelve una lista de clientes que tienen deudas pendientes.
+    """
+    query = text("""
+        SELECT DISTINCT c.id, c.nombre, c.deuda_total
+        FROM clientes c
+        JOIN deudas d ON c.id = d.cliente_id
+        WHERE d.estado = 'pendiente' AND c.deuda_total > 0
+        ORDER BY c.nombre
+    """)
+    with engine.connect() as conn:
+        result = conn.execute(query)
+        return [dict(row._mapping) for row in result]
+    

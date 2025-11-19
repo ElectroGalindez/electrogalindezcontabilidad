@@ -14,6 +14,10 @@ def list_products() -> List[Dict[str, Any]]:
         result = conn.execute(text("SELECT * FROM productos ORDER BY nombre"))
         return [dict(r._mapping) for r in result]
 
+def map_productos() -> Dict[str, str]:
+    with engine.connect() as conn:
+        result = conn.execute(text("SELECT id, nombre FROM productos"))
+        return {row["id"]: row["nombre"] for row in result.mappings()}
 # ---------------------------
 # AGREGAR PRODUCTO
 # ---------------------------
@@ -170,3 +174,5 @@ def eliminar_producto(id_producto: int, usuario: str = None):
                     registrar_log(usuario, f"Eliminó producto {eliminado['nombre']} (ID {eliminado['id']})")
                 return dict(eliminado)  # Retornar como diccionario
             return None
+        
+        
