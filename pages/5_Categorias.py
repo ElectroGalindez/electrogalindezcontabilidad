@@ -12,17 +12,30 @@ st.title("📂 Gestión de Categorías")
 if "usuario" not in st.session_state or st.session_state.usuario is None:
     st.warning("Debes iniciar sesión para acceder a esta página.")
     st.stop()
-# ---------------------------
-# Cargar categorías
-# ---------------------------
-lista_categorias = categorias.list_categories()
-df = pd.DataFrame(lista_categorias)
+
+usuario_actual = st.session_state.usuario["username"]
 
 # ---------------------------
-# Buscador
+# Cache de categorías y productos
+# ---------------------------
+@st.cache_data(ttl=30)
+def cargar_categorias():
+    return categorias.list_categories()
+
+@st.cache_data(ttl=30)
+def cargar_productos():
+    return productos.list_products()
+
+lista_categorias = cargar_categorias()
+lista_productos = cargar_productos()
+
+df_categorias = pd.DataFrame(lista_categorias)
+
+# ---------------------------
+# Buscador dinámico
 # ---------------------------
 busqueda = st.text_input("🔍 Buscar por nombre o ID:")
-df_filtrado = df.copy()
+df_filtrado = df_categorias.copy()
 if busqueda:
     mask = (
         df_filtrado["nombre"].str.contains(busqueda, case=False, na=False) |
@@ -30,83 +43,71 @@ if busqueda:
     )
     df_filtrado = df_filtrado[mask]
 
-st.dataframe(df_filtrado, width='stretch')
+st.dataframe(df_filtrado, use_container_width=True, hide_index=True)
+
+# ---------------------------
+# Selección de categoría
+# ---------------------------
+categoria_actual = None
+if not df_filtrado.empty:
+    nombre_sel = st.selectbox("Selecciona una categoría", df_filtrado["nombre"].tolist())
+    categoria_actual = next((c for c in lista_categorias if c["nombre"] == nombre_sel), None)
 
 # ---------------------------
 # Formulario Crear / Editar
 # ---------------------------
+st.subheader("➕ Crear o ✏️ Editar Categoría")
+with st.form("form_categoria"):
+    nuevo_nombre = st.text_input(
+        "Nombre de la categoría",
+        value=categoria_actual["nombre"] if categoria_actual else ""
+    )
+    col1, col2 = st.columns(2)
+    with col1:
+        crear = st.form_submit_button("Guardar")
+    with col2:
+        actualizar = st.form_submit_button("Actualizar") if categoria_actual else False
 
-import streamlit as st
-from backend import categorias
-
-st.title("📦 Gestión de Categorías")
-
-# === Mostrar todas las categorías ===
-todas = categorias.list_categories()
-nombres = [c["nombre"] for c in todas]
-
-categoria_actual = None
-if nombres:
-    nombre_sel = st.selectbox("Selecciona una categoría", nombres)
-    categoria_actual = next((c for c in todas if c["nombre"] == nombre_sel), None)
-else:
-    st.info("No hay categorías creadas todavía.")
-
-# === Crear nueva categoría ===
-st.subheader("➕ Crear nueva categoría")
-with st.form("crear_categoria"):
-    nuevo_nombre = st.text_input("Nombre de la categoría")
-    if st.form_submit_button("Guardar"):
+    if crear:
         if nuevo_nombre.strip():
-            categorias.agregar_categoria(nuevo_nombre.strip(), usuario="admin")
+            categorias.agregar_categoria(nuevo_nombre.strip(), usuario=usuario_actual)
             st.success(f"Categoría '{nuevo_nombre}' creada correctamente ✅")
+            st.cache_data.clear()
             st.rerun()
         else:
             st.warning("El nombre no puede estar vacío.")
 
-# === Editar categoría existente ===
+    if actualizar:
+        if nuevo_nombre.strip() and categoria_actual:
+            categorias.editar_categoria(categoria_actual["id"], nuevo_nombre.strip(), usuario=usuario_actual)
+            st.success(f"Categoría actualizada a '{nuevo_nombre}' ✅")
+            st.cache_data.clear()
+            st.rerun()
+        else:
+            st.warning("El nombre no puede estar vacío.")
+
+# ---------------------------
+# Eliminar categoría
+# ---------------------------
+st.subheader("🗑️ Eliminar Categoría")
 if categoria_actual:
-    st.subheader("✏️ Editar categoría seleccionada")
-    with st.form("editar_categoria"):
-        nuevo_nombre = st.text_input("Nuevo nombre", categoria_actual["nombre"])
-        if st.form_submit_button("Actualizar"):
-            if nuevo_nombre.strip():
-                categorias.editar_categoria(categoria_actual["id"], nuevo_nombre.strip(), usuario="admin")
-                st.success(f"Categoría actualizada a '{nuevo_nombre}' ✅")
-                st.rerun()
-            else:
-                st.warning("El nombre no puede estar vacío.")
-
-# === Eliminar categoría ===
-st.subheader("🗑️ Eliminar categoría")
-
-if categoria_actual:
-    asociados = categorias.list_products_by_category(categoria_actual["id"])
-
+    asociados = [p for p in lista_productos if p.get("categoria_id") == categoria_actual["id"]]
     if asociados:
         st.warning(
-            f"No puedes eliminar la categoría '{categoria_actual['nombre']}' "
-            f"porque tiene {len(asociados)} productos asociados."
+            f"No puedes eliminar la categoría '{categoria_actual['nombre']}' porque tiene {len(asociados)} productos asociados."
         )
-
-        # Mostrar lista breve de productos (opcional)
         with st.expander("Ver productos asociados"):
             for p in asociados:
                 st.text(f"- {p['nombre']} (ID: {p['id']})")
     else:
-        confirmar = st.checkbox(
-            f"Sí, quiero eliminar la categoría '{categoria_actual['nombre']}'"
-        )
-
+        confirmar = st.checkbox(f"Sí, quiero eliminar '{categoria_actual['nombre']}'")
         if confirmar and st.button("Eliminar definitivamente"):
             try:
-                categorias.eliminar_categoria(
-                    categoria_actual["id"],
-                    usuario=st.session_state.usuario["username"]
-                )
+                categorias.eliminar_categoria(categoria_actual["id"], usuario=usuario_actual)
                 st.success(f"Categoría '{categoria_actual['nombre']}' eliminada correctamente ✅")
+                st.cache_data.clear()
                 st.rerun()
             except Exception as e:
                 st.error(f"Error al eliminar: {str(e)}")
 else:
-    st.info("Selecciona una categoría para eliminar.")
+    st.info("Selecciona una categoría para editar o eliminar.")
