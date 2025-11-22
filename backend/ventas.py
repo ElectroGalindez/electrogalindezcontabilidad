@@ -185,6 +185,7 @@ def generar_factura_pdf(venta, cliente, productos_vendidos, gestor_info=None, lo
         metodo_pago = venta.get("tipo_pago") or ""
         vendedor = gestor_info.get("vendedor","") if gestor_info else ""
         chofer = gestor_info.get("chofer","") if gestor_info else ""
+        chapa = gestor_info.get("chapa","") if gestor_info else ""
         observaciones = venta.get("observaciones","")
         # ---------------------------
         # Totales y pagos
@@ -199,13 +200,14 @@ def generar_factura_pdf(venta, cliente, productos_vendidos, gestor_info=None, lo
 
         row_y2 = height - 110 - y_offset
         c.drawString(col2_x, row_y2, f"Total: ${total:.2f}"); row_y2 -= line_height
-        c.drawString(col2_x, row_y2, f"Pagado: {pagado_str}"); row_y2 -= line_height
+        c.drawString(col2_x, row_y2, f"Pagado: {pagado_str or pagado}"); row_y2 -= line_height
         c.drawString(col2_x, row_y2, f"Saldo pendiente: ${saldo:.2f}"); row_y2 -= line_height
         c.drawString(col2_x, row_y2, f"Método de pago: {metodo_pago}"); row_y2 -= line_height
         if observaciones:
             c.drawString(col2_x, row_y2, f"Observaciones: {observaciones}"); row_y2 -= line_height
         c.drawString(col2_x, row_y2, f"Vendedor: {vendedor}"); row_y2 -= line_height
-        c.drawString(col2_x, row_y2, f"Chofer: {chofer}")
+        c.drawString(col2_x, row_y2, f"Chofer: {chofer}"); row_y2 -= line_height
+        c.drawString(col2_x, row_y2, f"Chapa: {chapa}"); row_y2 -= line_height
 
         # ---------------------------
         # Separación antes de la tabla

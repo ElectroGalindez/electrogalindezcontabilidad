@@ -4,8 +4,8 @@ from backend import productos, clientes, ventas
 from backend.deudas import add_debt
 from datetime import datetime
 
-st.set_page_config(page_title="Ventas", layout="wide")
-st.title("🛒 Registrar Venta")
+st.set_page_config(page_title="Ventas Profesionales", layout="wide")
+st.title("🛒 Registrar Venta Profesional")
 
 # ---------------------------
 # Verificar sesión
@@ -17,26 +17,24 @@ if "usuario" not in st.session_state or st.session_state.usuario is None:
 usuario_actual = st.session_state.usuario["username"]
 
 # ---------------------------
-# Cache de clientes y productos
+# Cache eficiente para clientes y productos
 # ---------------------------
-@st.cache_data(ttl=10)
+@st.cache_data(ttl=20)
 def cached_clients():
-    return clientes.list_clients()
+    return clientes.list_clients() or []
+
+@st.cache_data(ttl=20)
+def cached_products():
+    return productos.list_products() or []
 
 clientes_data = cached_clients()
-
-@st.cache_data(ttl=10)
-def cached_products():
-    return productos.list_products()
-
 productos_data = cached_products()
-
 
 clientes_dict = {c["nombre"]: c["id"] for c in clientes_data}
 
-# =========================
+# ---------------------------
 # 👤 Selección de cliente
-# =========================
+# ---------------------------
 st.subheader("Cliente")
 cliente_id = None
 cliente_nombre = st.selectbox(
@@ -47,9 +45,9 @@ cliente_nombre = st.selectbox(
 if cliente_nombre:
     cliente_id = clientes_dict[cliente_nombre]
 
-# =========================
-# ➕ Crear nuevo cliente (plegable)
-# =========================
+# ---------------------------
+# ➕ Crear nuevo cliente
+# ---------------------------
 with st.expander("➕ Crear nuevo cliente", expanded=False):
     with st.form("form_nuevo_cliente", clear_on_submit=True):
         nombre_nuevo = st.text_input("Nombre *")
@@ -58,8 +56,7 @@ with st.expander("➕ Crear nuevo cliente", expanded=False):
         ci_nuevo = st.text_input("CI")
         chapa_nueva = st.text_input("Chapa")
 
-        submitted = st.form_submit_button("Crear cliente")
-        if submitted:
+        if st.form_submit_button("Crear cliente"):
             if not nombre_nuevo.strip():
                 st.error("❌ El nombre no puede estar vacío.")
             else:
@@ -71,47 +68,25 @@ with st.expander("➕ Crear nuevo cliente", expanded=False):
                     chapa=chapa_nueva
                 )
                 st.success(f"✅ Cliente '{nombre_nuevo}' creado correctamente.")
-                st.cache_data.clear()  # limpiar cache de clientes
+                st.cache_data.clear()  # limpiar cache
                 st.rerun()
 
 
-# =========================
+# ---------------------------
 # 📦 Selección de productos
-# =========================
+# ---------------------------
 if "items_venta" not in st.session_state:
     st.session_state["items_venta"] = []
 
 st.subheader("Productos disponibles")
 if productos_data:
-    opciones = {
-        f"{p['nombre']} (Stock: {p['cantidad']}, ${p['precio']:.2f})": p
-        for p in productos_data
-    }
-
-    producto_nombre = st.selectbox(
-        "Selecciona un producto",
-        [""] + list(opciones.keys()),
-        key="select_producto_ventas"
-    )
+    opciones = {f"{p['nombre']} (Stock: {p['cantidad']}, ${p['precio']:.2f})": p for p in productos_data}
+    producto_nombre = st.selectbox("Selecciona un producto", [""] + list(opciones.keys()), key="select_producto_ventas")
 
     if producto_nombre:
         prod = opciones[producto_nombre]
-
-        cantidad = st.number_input(
-            "Cantidad",
-            min_value=1,
-            max_value=prod["cantidad"],
-            value=1,
-            key=f"cant_{prod['id']}"
-        )
-
-        precio = st.number_input(
-            "Precio unitario",
-            min_value=0.01,
-            value=float(prod["precio"]),
-            step=0.01,
-            key=f"precio_{prod['id']}"
-        )
+        cantidad = st.number_input("Cantidad", min_value=1, max_value=prod["cantidad"], value=1, key=f"cant_{prod['id']}")
+        precio = st.number_input("Precio unitario", min_value=0.01, value=float(prod["precio"]), step=0.01, key=f"precio_{prod['id']}")
 
         if st.button(f"➕ Añadir {prod['nombre']}", key=f"add_{prod['id']}"):
             existente = next((i for i in st.session_state["items_venta"] if i["id_producto"] == prod["id"]), None)
@@ -134,20 +109,25 @@ if productos_data:
 else:
     st.warning("No hay productos registrados en el inventario.")
 
-# =========================
+# ---------------------------
 # 📝 Orden actual
-# =========================
+# ---------------------------
 if st.session_state["items_venta"]:
     st.subheader("Orden actual")
     df = pd.DataFrame(st.session_state["items_venta"])
-    df["subtotal"] = df["cantidad"] * df["precio_unitario"]
-    st.dataframe(df[["id_producto","nombre","cantidad","precio_unitario","subtotal"]], use_container_width=True)
+    df["Subtotal"] = df["cantidad"] * df["precio_unitario"]
 
-    total = df["subtotal"].sum()
+    moneda_cols = ["precio_unitario", "Subtotal"]
+    df_display = df.copy()
+    for col in moneda_cols:
+        df_display[col] = df_display[col].map("${:,.2f}".format)
+
+    st.dataframe(df_display[["id_producto","nombre","cantidad","precio_unitario","Subtotal"]], use_container_width=True)
+
+    total = df["Subtotal"].sum()
     st.subheader(f"💰 Total: ${total:,.2f}")
 
     col_a, col_b = st.columns([1,1])
-
     with col_a:
         if st.button("🗑️ Vaciar orden", key="vaciar_orden"):
             st.session_state["items_venta"] = []
@@ -157,20 +137,14 @@ if st.session_state["items_venta"]:
     with col_b:
         if cliente_id:
             pago_estado = st.radio("Estado del pago", ["Pagado", "Pendiente"])
-            tipo_pago = (
-                st.selectbox(
-                    "Método de pago",
-                    ["Efectivo", "Transferencia", "Tarjeta", "Otro"],
-                    key="tipo_pago_venta"
-                ) if pago_estado == "Pagado" else "Pendiente"
-            )
+            tipo_pago = st.selectbox("Método de pago", ["Efectivo", "Transferencia", "Tarjeta", "Otro"], key="tipo_pago_venta") if pago_estado=="Pagado" else "Pendiente"
 
             if st.button("💾 Registrar Venta", key="registrar_venta"):
                 if not st.session_state["items_venta"]:
                     st.error("No hay productos en la venta.")
                 else:
                     try:
-                        monto_pagado = float(total) if pago_estado == "Pagado" else 0.0
+                        monto_pagado = float(total) if pago_estado=="Pagado" else 0.0
                         nueva_venta = ventas.register_sale(
                             cliente_id=cliente_id,
                             productos=st.session_state["items_venta"],
@@ -180,15 +154,14 @@ if st.session_state["items_venta"]:
                             tipo_pago=tipo_pago
                         )
 
-                        # Registrar deuda si aplica
-                        if pago_estado == "Pendiente":
+                        if pago_estado=="Pendiente":
                             saldo_pendiente = float(total) - monto_pagado
                             deuda_id = add_debt(
                                 cliente_id=cliente_id,
-                                monto_total=saldo_pendiente,  # ✅ corregido
+                                monto_total=saldo_pendiente,
                                 venta_id=nueva_venta["id"],
                                 productos=st.session_state["items_venta"],
-                                usuario=st.session_state["usuario"]["username"],
+                                usuario=usuario_actual,
                                 estado="pendiente"
                             )
                             st.info(f"Deuda creada por ${saldo_pendiente:,.2f}")
@@ -196,29 +169,25 @@ if st.session_state["items_venta"]:
                         st.success(f"✅ Venta registrada ID {nueva_venta['id']} - Total ${nueva_venta['total']:.2f}")
                         st.session_state["items_venta"] = []
                         st.rerun()
-
                     except Exception as e:
                         st.error(f"Error al registrar la venta: {str(e)}")
 
-
-
-import streamlit as st
-from backend.ventas import generar_factura_pdf
-from backend.clientes import get_client
-from backend import ventas
-
+# ---------------------------
+# 💳 Generar Factura PDF
+# ---------------------------
+st.markdown("---")
 st.title("💳 Generar Factura Profesional en PDF")
 
-# ---------------------------
-# Selección de venta
-# ---------------------------
-ventas_dict = {f"ID {v['id']} - Cliente {v.get('cliente_id','N/A')} - Total ${v.get('total',0):.2f}": v for v in ventas.list_sales()}
+ventas_dict = {
+    f"ID {v['id']} - Cliente {v.get('cliente_id','N/A')} - Total ${v.get('total',0):.2f}": v
+    for v in ventas.list_sales()
+}
 venta_keys = [""] + list(ventas_dict.keys())
 venta_sel = st.selectbox("Selecciona venta", venta_keys)
 
 if venta_sel:
     venta_obj = ventas_dict[venta_sel]
-    cliente_obj = get_client(venta_obj.get("cliente_id"))
+    cliente_obj = clientes.get_client(venta_obj.get("cliente_id"))
 
     if cliente_obj is None:
         st.error(f"❌ No se encontró el cliente con ID {venta_obj.get('cliente_id')}")
@@ -226,30 +195,44 @@ if venta_sel:
         productos_vendidos = venta_obj.get("productos_vendidos", [])
 
         # ---------------------------
-        # Formulario fijo para campos faltantes
+        # Formulario para actualizar campos
         # ---------------------------
-        observaciones = st.text_area("Observaciones", value=venta_obj.get("observaciones",""))
-        vendedor = st.text_input("Vendedor", value=venta_obj.get("vendedor",""))
-        telefono_vendedor = st.text_input("Teléfono del Vendedor", value=venta_obj.get("telefono_vendedor",""))
-        chofer = st.text_input("Chofer", value=venta_obj.get("chofer",""))
-        chapa_nueva = st.text_input("Chapa", value=venta_obj.get("chapa",""))
+        with st.form("form_factura"):
+            observaciones = st.text_area("Observaciones", value=venta_obj.get("observaciones",""))
+            vendedor = st.text_input("Vendedor", value=venta_obj.get("vendedor",""))
+            telefono_vendedor = st.text_input("Teléfono del Vendedor", value=venta_obj.get("telefono_vendedor",""))
+            chofer = st.text_input("Chofer", value=venta_obj.get("chofer",""))
+            chapa = st.text_input("Chapa", value=venta_obj.get("chapa",""))
+
+            submitted = st.form_submit_button("Actualizar Datos")
+
+        if submitted:
+            # Actualizar datos en venta_obj
+            venta_obj.update({
+                "observaciones": observaciones,
+                "vendedor": vendedor,
+                "telefono_vendedor": telefono_vendedor,
+                "chofer": chofer,
+                "chapa": chapa
+            })
+            st.success("Datos actualizados ✅")
 
         # ---------------------------
-        # Botón único para generar y descargar PDF
+        # Botón de descarga fuera del formulario
         # ---------------------------
         if st.button("📄 Generar y Descargar Factura PDF"):
-            # Guardar temporalmente los datos en venta_obj
-            venta_obj["observaciones"] = observaciones
-            venta_obj["vendedor"] = vendedor
-            venta_obj["telefono_vendedor"] = telefono_vendedor
-            venta_obj["chofer"] = chofer
-
             gestor_info = {
                 "vendedor": f"{vendedor} (+53 {telefono_vendedor})",
                 "chofer": chofer,
-                "chapa": chapa_nueva
+                "chapa": chapa
             }
-            pdf_bytes = generar_factura_pdf(venta_obj, cliente_obj, productos_vendidos, gestor_info=gestor_info)
+
+            pdf_bytes = ventas.generar_factura_pdf(
+                venta_obj,
+                cliente_obj,
+                productos_vendidos,
+                gestor_info=gestor_info
+            )
 
             st.download_button(
                 label="⬇️ Descargar Factura PDF",
