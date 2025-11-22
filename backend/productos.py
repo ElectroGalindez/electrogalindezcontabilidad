@@ -91,6 +91,47 @@ def guardar_producto(
             })
 
             return dict(new_prod)
+        
+# editar producto
+def editar_producto(
+    producto_id: str,
+    nombre: str,
+    precio: float,
+    cantidad: int,
+    categoria_id: str,
+    usuario: Optional[str] = None
+) -> dict:  
+    with engine.begin() as conn:
+        update_query = text("""
+            UPDATE productos
+            SET nombre = :nombre,
+                precio = :precio,
+                cantidad = :cantidad,
+                categoria_id = :categoria_id
+            WHERE id = :id
+            RETURNING *
+        """)
+        updated = conn.execute(update_query, {
+            "nombre": nombre,
+            "precio": precio,
+            "cantidad": cantidad,
+            "categoria_id": categoria_id,
+            "id": producto_id
+        }).mappings().fetchone()
+
+        registrar_log(usuario or "sistema", "editar_producto", {
+            "id": updated["id"],
+            "nombre": nombre,
+            "precio": precio,
+            "cantidad": cantidad,
+            "categoria_id": categoria_id
+        })
+
+        return dict(updated)    
+    
+
+
+
 # ---------------------------
 # OBTENER PRODUCTO
 # ---------------------------
@@ -103,13 +144,27 @@ def get_product(producto_id: str) -> Dict[str, Any]:
 # ---------------------------
 # ELIMINAR PRODUCTO
 # ---------------------------
-def delete_product(producto_id: str, usuario=None) -> bool:
-    with engine.connect() as conn:
+def delete_product(producto_id: str, usuario: Optional[str] = None) -> bool:
+    with engine.begin() as conn:
+        # Obtener el nombre del producto antes de eliminarlo para el log
+        result = conn.execute(text("SELECT nombre FROM productos WHERE id = :id"), {"id": producto_id})
+        row = result.mappings().first()
+        if not row:
+            return False  # Producto no encontrado
+
+        producto_nombre = row["nombre"]
+
+        # Eliminar el producto
         conn.execute(text("DELETE FROM productos WHERE id = :id"), {"id": producto_id})
-        conn.commit()
-    
-    registrar_log(usuario or "sistema", "eliminar_producto", {"id": producto_id})
-    return True
+
+        # Registrar log de eliminación
+        if usuario:
+            registrar_log(usuario, "eliminar_producto", {
+                "id": producto_id,
+                "nombre": producto_nombre
+            })
+
+        return True
 
 # ---------------------------
 #   adjust_stock
