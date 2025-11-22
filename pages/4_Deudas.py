@@ -9,15 +9,45 @@ from backend import clientes, productos, deudas
 st.set_page_config(page_title="💳 Gestión de Deudas", layout="wide")
 st.title("💳 Gestión de Deudas")
 
+
+# ==========================================================
+# CACHÉ — OPTIMIZACIÓN CRÍTICA
+# ==========================================================
+@st.cache_data(ttl=30)
+def load_clientes_con_deuda():
+    return deudas.list_clientes_con_deuda() or []
+
+@st.cache_data(ttl=30)
+def load_productos_map():
+    return productos.map_productos() or {}
+
+@st.cache_data(ttl=10)
+def load_deudas_cliente(cid: int):
+    return deudas.debts_by_client(cid) or []
+
+@st.cache_data(ttl=20)
+def load_detalle_deudas():
+    # Recomendación: en backend filtrar solo pendientes para acelerar aún más
+    return deudas.list_detalle_deudas() or []
+
+@st.cache_data(ttl=30)
+def load_clientes_dict():
+    lista = clientes.list_clients() or []
+    return {c["id"]: c["nombre"] for c in lista}
+
+
+
 # ==========================================================
 # CARGAR DATOS
 # ==========================================================
-clientes_con_deuda = deudas.list_clientes_con_deuda() or []
-productos_map = productos.map_productos() or {}
+clientes_con_deuda = load_clientes_con_deuda()
+productos_map = load_productos_map()
+clientes_dict = load_clientes_dict()
 
-# Diccionario nombre -> id
 clientes_opciones = {c["nombre"]: c["id"] for c in clientes_con_deuda}
 lista_nombres = [""] + list(clientes_opciones.keys())
+
+
 
 # ==========================================================
 # SELECTOR DE CLIENTE
@@ -32,10 +62,13 @@ cliente_sel = st.selectbox(
 
 cliente_id = clientes_opciones.get(cliente_sel)
 
+
+
 # ==========================================================
-# TABLA DE DEUDAS DEL CLIENTE (SI HAY SELECCIÓN)
+# TABLA DE DEUDAS DEL CLIENTE
 # ==========================================================
 if cliente_sel and cliente_id:
+
     cliente_obj = clientes.get_client(cliente_id)
     deuda_total = float(cliente_obj.get("deuda_total", 0) or 0)
 
@@ -45,21 +78,24 @@ if cliente_sel and cliente_id:
         unsafe_allow_html=True
     )
 
-    # Filtrar deudas pendientes del cliente
-    deudas_cliente = deudas.debts_by_client(cliente_id) or []
-    filas_pendientes = []
+    deudas_cliente = load_deudas_cliente(cliente_id)
 
+    filas_pendientes = []
     for deuda in deudas_cliente:
         for det in deuda.get("detalles", []):
             if (det.get("estado") or "").lower() != "pendiente":
-                continue  # Solo pendientes
+                continue
+
             cantidad = float(det.get("cantidad") or 0)
             precio_unitario = float(det.get("precio_unitario") or 0)
             monto_pendiente = cantidad * precio_unitario
+
             filas_pendientes.append({
+                "Deuda ID": deuda.get("id"),
                 "Detalle ID": det.get("id"),
+                "Producto ID": det.get("producto_id"),
                 "Producto": productos_map.get(det.get("producto_id"), "Producto"),
-                "Cantidad": round(cantidad, 2),
+                "Cantidad": cantidad,
                 "Precio Unitario": round(precio_unitario, 2),
                 "Monto Pendiente": round(monto_pendiente, 2),
                 "Fecha": str(deuda.get("fecha"))[:19],
@@ -68,8 +104,9 @@ if cliente_sel and cliente_id:
     df_pendientes = pd.DataFrame(filas_pendientes)
 
     st.subheader("📋 Deudas Pendientes del Cliente")
+
     if not df_pendientes.empty:
-        # Mostrar tabla resumida
+
         st.dataframe(
             df_pendientes[["Producto","Cantidad", "Precio Unitario", "Monto Pendiente", "Fecha"]]
             .sort_values("Fecha", ascending=False)
@@ -82,7 +119,7 @@ if cliente_sel and cliente_id:
             height=200
         )
 
-        # Selector de deuda a pagar
+        # Selector de deuda
         opciones_deuda = {
             f"{row['Producto']} - {row['Fecha']} (${row['Monto Pendiente']:,.2f})": row
             for _, row in df_pendientes.iterrows()
@@ -112,38 +149,47 @@ if cliente_sel and cliente_id:
 
             if st.button("Registrar Pago", key=f"btn_pagar_{detalle_id}"):
                 try:
-                    resultado = deudas.pay_debt_producto(
-                        deuda_id=detalle_id,
-                        producto_id=None,  # asumiendo función maneja detalle por ID
+                    deudas.pay_debt_producto(
+                        deuda_id=detalle["Deuda ID"],
+                        producto_id=detalle["Producto ID"],
                         monto_pago=monto_pago
                     )
+
+                    # Limpia cachés para refrescar
+                    st.cache_data.clear()
+
                     st.success(f"💰 Pago de ${monto_pago:,.2f} registrado correctamente.")
-                    st.experimental_rerun()
+                    st.rerun()
+
                 except Exception as e:
                     st.error(f"❌ Error al registrar el pago: {str(e)}")
 
-        # Exportar pendientes a Excel
+        # Exportar Excel
         buffer = BytesIO()
         with pd.ExcelWriter(buffer, engine="xlsxwriter") as writer:
             df_pendientes.to_excel(writer, index=False, sheet_name="DeudasPendientes")
+
         st.download_button(
             "⬇️ Descargar Deudas Pendientes del Cliente",
             buffer.getvalue(),
             f"deudas_pendientes_cliente_{cliente_id}.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
+
     else:
         st.info("✔ Este cliente no tiene deudas pendientes.")
 
 else:
     st.info("🔍 Selecciona un cliente para ver sus deudas específicas.")
 
-# ==========================================================
-# TABLA GENERAL DE DEUDAS PENDIENTES (SIEMPRE VISIBLE)
-# ==========================================================
-st.subheader("📊 Todas las Deudas Pendientes (Clientes y Productos)")
 
-detalles_totales = deudas.list_detalle_deudas() or []
+
+# ==========================================================
+# TABLA GENERAL DE TODAS LAS DEUDAS PENDIENTES
+# ==========================================================
+st.subheader("📊 Todas las Deudas Pendientes")
+
+detalles_totales = load_detalle_deudas()
 filas = []
 
 for d in detalles_totales:
@@ -154,11 +200,8 @@ for d in detalles_totales:
     precio_unitario = float(d.get("precio_unitario") or 0)
     monto_total = cantidad * precio_unitario
 
-    cliente = clientes.get_client(d.get("cliente_id"))
-    nombre_cliente = cliente.get("nombre", "Desconocido") if cliente else "Sin nombre"
-
     filas.append({
-        "Cliente": nombre_cliente,
+        "Cliente": clientes_dict.get(d.get("cliente_id"), "Desconocido"),
         "Deuda ID": d.get("deuda_id"),
         "Producto": productos_map.get(d.get("producto_id"), "Producto"),
         "Cantidad": round(cantidad, 2),
@@ -183,10 +226,10 @@ else:
         height=400
     )
 
-    # Descarga Excel general
     buffer = BytesIO()
     with pd.ExcelWriter(buffer, engine="xlsxwriter") as writer:
         df_general.to_excel(writer, index=False, sheet_name="DeudasPendientes")
+
     st.download_button(
         "⬇️ Descargar Excel General",
         buffer.getvalue(),
