@@ -172,71 +172,95 @@ if st.session_state["items_venta"]:
                     except Exception as e:
                         st.error(f"Error al registrar la venta: {str(e)}")
 
-# ---------------------------
-# 💳 Generar Factura PDF
-# ---------------------------
+import streamlit as st
+from backend import ventas, clientes
+
+# ---------------------------------------------------
+# 🔧 CONFIGURACIÓN INICIAL
+# ---------------------------------------------------
 st.markdown("---")
 st.title("💳 Generar Factura Profesional en PDF")
 
-ventas_dict = {
-    f"ID {v['id']} - Cliente {v.get('cliente_id','N/A')} - Total ${v.get('total',0):.2f}": v
-    for v in ventas.list_sales()
-}
-venta_keys = [""] + list(ventas_dict.keys())
+# ===========================
+# 1) SELECCIÓN DE VENTA
+# ===========================
+if "ventas_dict" not in st.session_state:
+    ventas_list = ventas.list_sales()
+    st.session_state.ventas_dict = {
+        f"ID {v['id']} - Cliente {v.get('cliente_id','N/A')} - Total ${v.get('total', 0):.2f}": v
+        for v in ventas_list
+    }
+
+venta_keys = [""] + list(st.session_state.ventas_dict.keys())
 venta_sel = st.selectbox("Selecciona venta", venta_keys)
 
-if venta_sel:
-    venta_obj = ventas_dict[venta_sel]
-    cliente_obj = clientes.get_client(venta_obj.get("cliente_id"))
+if not venta_sel:
+    st.stop()
 
-    if cliente_obj is None:
-        st.error(f"❌ No se encontró el cliente con ID {venta_obj.get('cliente_id')}")
-    else:
-        productos_vendidos = venta_obj.get("productos_vendidos", [])
+venta_obj = st.session_state.ventas_dict[venta_sel]
+cliente_obj = clientes.get_client(venta_obj.get("cliente_id"))
 
-        # ---------------------------
-        # Formulario para actualizar campos
-        # ---------------------------
-        with st.form("form_factura"):
-            observaciones = st.text_area("Observaciones", value=venta_obj.get("observaciones",""))
-            vendedor = st.text_input("Vendedor", value=venta_obj.get("vendedor",""))
-            telefono_vendedor = st.text_input("Teléfono del Vendedor", value=venta_obj.get("telefono_vendedor",""))
-            chofer = st.text_input("Chofer", value=venta_obj.get("chofer",""))
-            chapa = st.text_input("Chapa", value=venta_obj.get("chapa",""))
+if not cliente_obj:
+    st.error(f"❌ No se encontró el cliente con ID {venta_obj.get('cliente_id')}")
+    st.stop()
 
-            submitted = st.form_submit_button("Actualizar Datos")
+productos_vendidos = venta_obj.get("productos_vendidos", [])
 
-        if submitted:
-            # Actualizar datos en venta_obj
-            venta_obj.update({
-                "observaciones": observaciones,
-                "vendedor": vendedor,
-                "telefono_vendedor": telefono_vendedor,
-                "chofer": chofer,
-                "chapa": chapa
-            })
-            st.success("Datos actualizados ✅")
 
-        # ---------------------------
-        # Botón de descarga fuera del formulario
-        # ---------------------------
-        if st.button("📄 Generar y Descargar Factura PDF"):
-            gestor_info = {
-                "vendedor": f"{vendedor} (+53 {telefono_vendedor})",
-                "chofer": chofer,
-                "chapa": chapa
-            }
+# ===========================
+# FORMULARIO DE DATOS PARA FACTURA
+# ===========================
+with st.form("form_datos_factura"):
+    st.subheader("✏️ Datos adicionales (solo para la factura)")
 
-            pdf_bytes = ventas.generar_factura_pdf(
-                venta_obj,
-                cliente_obj,
-                productos_vendidos,
-                gestor_info=gestor_info
-            )
+    observaciones = st.text_area("Observaciones", value=venta_obj.get("observaciones", ""))
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        vendedor = st.text_input("Vendedor", value=venta_obj.get("vendedor", ""))
+        chofer = st.text_input("Chofer", value=venta_obj.get("chofer", ""))
+    with col2:
+        telefono_vendedor = st.text_input("Teléfono del Vendedor", value=venta_obj.get("telefono_vendedor", ""))
+        chapa = st.text_input("Chapa", value=venta_obj.get("chapa", ""))
 
-            st.download_button(
-                label="⬇️ Descargar Factura PDF",
-                data=pdf_bytes,
-                file_name=f"Factura_{venta_obj.get('id')}.pdf",
-                mime="application/pdf"
-            )
+    # Botón de formulario para GENERAR PDF
+    generar = st.form_submit_button("🖨️ Generar Factura PDF")
+
+# ===========================
+# DESCARGA FUERA DEL FORMULARIO
+# ===========================
+if generar:
+    # Guardamos solo en memoria
+    venta_obj.update({
+        "observaciones": observaciones,
+        "vendedor": vendedor,
+        "telefono_vendedor": telefono_vendedor,
+        "chofer": chofer,
+        "chapa": chapa
+    })
+    st.session_state.ventas_dict[venta_sel] = venta_obj
+
+    gestor_info = {
+        "vendedor": f"{vendedor} (+53 {telefono_vendedor})" if vendedor else "",
+        "chofer": chofer,
+        "chapa": chapa
+    }
+
+    # Generar PDF
+    pdf_bytes = ventas.generar_factura_pdf(
+        venta_obj,
+        cliente_obj,
+        productos_vendidos,
+        gestor_info=gestor_info,
+        logo_path="assets/logo.png"  
+    )
+
+
+    # DESCARGA INMEDIATA
+    st.download_button(
+        label=f"⬇️ Descargar Factura PDF {venta_obj.get('id')}",
+        data=pdf_bytes,
+        file_name=f"Factura_{venta_obj.get('id')}.pdf",
+        mime="application/pdf"
+    )
+    st.success("Factura generada y lista para descargar ✔")

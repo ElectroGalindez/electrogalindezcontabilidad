@@ -61,6 +61,43 @@ def register_sale(cliente_id, total, pagado, usuario, tipo_pago, productos=None)
 
     return {"id": venta_id, "total": total, "pagado": pagado, "fecha": fecha, "productos_vendidos": productos_data}
 
+def editar_venta_extra(
+    sale_id: str,
+    observaciones: Optional[str] = None,
+    vendedor: Optional[str] = None,
+    telefono_vendedor: Optional[str] = None,
+    chofer: Optional[str] = None,
+    chapa: Optional[str] = None,
+    usuario: Optional[str] = None
+):
+    with engine.begin() as conn:
+        update_query = text("""
+            UPDATE ventas
+            SET observaciones = COALESCE(:observaciones, observaciones),
+                vendedor = COALESCE(:vendedor, vendedor),
+                telefono_vendedor = COALESCE(:telefono_vendedor, telefono_vendedor),
+                chofer = COALESCE(:chofer, chofer),
+                chapa = COALESCE(:chapa, chapa)
+            WHERE id = :id
+            RETURNING *
+        """)
+
+        updated = conn.execute(update_query, {
+            "id": sale_id,
+            "observaciones": observaciones,
+            "vendedor": vendedor,
+            "telefono_vendedor": telefono_vendedor,
+            "chofer": chofer,
+            "chapa": chapa
+        }).mappings().first()
+
+        if updated:
+            registrar_log(usuario or "sistema", "editar_venta_extra", dict(updated))
+            return dict(updated)
+
+    return None
+
+
 # ----------------------------
 # Listar ventas
 # ----------------------------
@@ -115,19 +152,19 @@ def listar_ventas_dict():
     ventas_dict = {f"ID {v['id']} - Cliente {v['cliente_id']} - Total ${v['total']}": v for v in ventas}
     return ventas_dict
 
+
 from reportlab.lib.pagesizes import letter
 from reportlab.lib import colors
 from reportlab.platypus import Table, TableStyle
 from reportlab.pdfgen import canvas
 from reportlab.lib.styles import getSampleStyleSheet
 from io import BytesIO
-import os
 
 def generar_factura_pdf(venta, cliente, productos_vendidos, gestor_info=None, logo_path=None):
     """
     Genera una factura profesional en PDF mostrando todos los productos de la venta,
     duplicada en la misma hoja (para cliente y archivo interno).
-    
+
     venta: dict con info de la venta
     cliente: dict con info del cliente
     productos_vendidos: lista de dicts {nombre, cantidad, precio_unitario}
@@ -138,21 +175,30 @@ def generar_factura_pdf(venta, cliente, productos_vendidos, gestor_info=None, lo
     c = canvas.Canvas(buffer, pagesize=letter)
     width, height = letter
     styles = getSampleStyleSheet()
-    styleN = styles['Normal']
-    styleB = styles['Heading2']
 
-    # ---------------------------
-    # Función para dibujar cada factura
-    # ---------------------------
+    import os
+    from reportlab.lib.utils import ImageReader
     def dibujar_factura(y_offset=0):
         nonlocal c
         
+        # Logo
+        if logo_path and os.path.exists(logo_path):
+            try:
+                logo = ImageReader(logo_path)
+                logo_width = 80  # ancho en puntos
+                logo_height = 70  # alto en puntos
+                c.drawImage(logo, 40, height - 85 - y_offset, width=logo_width, height=logo_height, preserveAspectRatio=True)
+            except Exception as e:
+                print(f"No se pudo cargar el logo: {e}")
+        
+        # ---------------------------
+        # Información de la empresa
+        # ---------------------------
         c.setFont("Helvetica-Bold", 14)
-        c.drawString(100, height - 50 - y_offset, "Omar Galíndez Ramirez. CI: 85082506984")
+        c.drawString(130, height - 50 - y_offset, "Omar Galíndez Ramirez. CI: 85082506984")
         c.setFont("Helvetica", 10)
-        c.drawString(100, height - 65 - y_offset, f"Factura N°: {venta.get('numero', venta.get('id',''))}")
-        c.drawString(100, height - 80 - y_offset, f"Fecha: {str(venta.get('fecha',''))}")
-
+        c.drawString(130, height - 65 - y_offset, f"Factura N°: {venta.get('numero', venta.get('id',''))}")
+        c.drawString(130, height - 80 - y_offset, f"Fecha: {str(venta.get('fecha',''))}")
 
         # ---------------------------
         # Columnas: Cliente y Totales
@@ -163,12 +209,13 @@ def generar_factura_pdf(venta, cliente, productos_vendidos, gestor_info=None, lo
         row_y = height - 110 - y_offset
         line_height = 15
 
-        # Columna 1: Cliente
+        # Cliente
         cliente_nombre = cliente.get("nombre") or ""
         cliente_ci = cliente.get("ci") or ""
         cliente_chapa = cliente.get("chapa") or ""
         cliente_direccion = cliente.get("direccion") or ""
         cliente_telefono = cliente.get("telefono") or ""
+
 
         c.drawString(col1_x, row_y, f"Cliente: {cliente_nombre}"); row_y -= line_height
         c.drawString(col1_x, row_y, f"Carnet/ID: {cliente_ci}"); row_y -= line_height
@@ -176,31 +223,23 @@ def generar_factura_pdf(venta, cliente, productos_vendidos, gestor_info=None, lo
         c.drawString(col1_x, row_y, f"Dirección: {cliente_direccion}"); row_y -= line_height
         c.drawString(col1_x, row_y, f"Teléfono: {cliente_telefono}")
 
-
-
-        # Columna 2: Totales y pagos
+        # Totales y pagos
         total = float(venta.get("total") or 0.0)
-        pagado = float(venta.get("pagado") or 0.0)
+        pagado_usd = float(venta.get("pagado") or 0.0)
         saldo = float(venta.get("saldo") or 0.0)
         metodo_pago = venta.get("tipo_pago") or ""
         vendedor = gestor_info.get("vendedor","") if gestor_info else ""
         chofer = gestor_info.get("chofer","") if gestor_info else ""
         chapa = gestor_info.get("chapa","") if gestor_info else ""
         observaciones = venta.get("observaciones","")
-        # ---------------------------
-        # Totales y pagos
-        # ---------------------------
-        total = float(venta.get("total") or 0.0)
-        pagado_usd = float(venta.get("pagado") or 0.0)
+
         tasa_cup = 120
         pagado_cup = pagado_usd * tasa_cup
-
-        # Mostrar Pagado en USD y CUP
         pagado_str = f"(USD) {pagado_usd:,.2f} - (CUP) {pagado_cup:,.2f}"
 
         row_y2 = height - 110 - y_offset
         c.drawString(col2_x, row_y2, f"Total: ${total:.2f}"); row_y2 -= line_height
-        c.drawString(col2_x, row_y2, f"Pagado: {pagado_str or pagado}"); row_y2 -= line_height
+        c.drawString(col2_x, row_y2, f"Pagado: {pagado_str}"); row_y2 -= line_height
         c.drawString(col2_x, row_y2, f"Saldo pendiente: ${saldo:.2f}"); row_y2 -= line_height
         c.drawString(col2_x, row_y2, f"Método de pago: {metodo_pago}"); row_y2 -= line_height
         if observaciones:
@@ -210,13 +249,9 @@ def generar_factura_pdf(venta, cliente, productos_vendidos, gestor_info=None, lo
         c.drawString(col2_x, row_y2, f"Chapa: {chapa}"); row_y2 -= line_height
 
         # ---------------------------
-        # Separación antes de la tabla
-        # ---------------------------
-        table_y_start = row_y - 40  # espacio extra para separar del chofer
-
-        # ---------------------------
         # Tabla de productos
         # ---------------------------
+        table_y_start = row_y - 40
         table_data = [["Producto", "Cantidad", "Precio Unitario", "Subtotal"]]
         for p in productos_vendidos:
             nombre = p.get("nombre","")
@@ -233,23 +268,18 @@ def generar_factura_pdf(venta, cliente, productos_vendidos, gestor_info=None, lo
             ('GRID', (0,0), (-1,-1), 1, colors.black),
             ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold')
         ]))
-        table.wrapOn(c, 40, table_y_start)
-        table.drawOn(c, 40, table_y_start - len(table_data)*18)
+        table.wrapOn(c, 50, table_y_start -20)
+        table.drawOn(c, 50, table_y_start - len(table_data)*18 - 20)
 
-        # ---------------------------
-        # Firma doble al final
-        # ---------------------------
+        # Firma doble
         firma_y = table_y_start - len(table_data)*18 - 60
-        c.drawString(40, firma_y, "__________________________")
-        c.drawString(40, firma_y - 12, "Firma Cliente")
-        c.drawString(320, firma_y, "__________________________")
-        c.drawString(320, firma_y - 12, "Firma Vendedor")
+        c.drawString(40, firma_y -30, "__________________________")
+        c.drawString(40, firma_y - 40, "Firma Cliente")
+        c.drawString(320, firma_y -30 ,"__________________________")
+        c.drawString(320, firma_y - 40, "Firma Vendedor")
 
-    # ---------------------------
     # Dibujar dos facturas en la misma hoja
-    # ---------------------------
     dibujar_factura(y_offset=0)
-    # Línea divisoria
     c.setStrokeColor(colors.gray)
     c.setLineWidth(1)
     c.line(40, height/2, width-40, height/2)
