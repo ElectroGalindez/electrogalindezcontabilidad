@@ -157,10 +157,11 @@ from reportlab.lib.pagesizes import letter
 from reportlab.lib import colors
 from reportlab.platypus import Table, TableStyle
 from reportlab.pdfgen import canvas
-from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib.utils import ImageReader
 from io import BytesIO
+import os
 
-def generar_factura_pdf(venta, cliente, productos_vendidos, gestor_info=None, logo_path=None):
+def generar_factura_pdf(venta, cliente, productos_vendidos, gestor_info=None, logo_path="assets/logo.png"):
     """
     Genera una factura profesional en PDF mostrando todos los productos de la venta,
     duplicada en la misma hoja (para cliente y archivo interno).
@@ -169,68 +170,61 @@ def generar_factura_pdf(venta, cliente, productos_vendidos, gestor_info=None, lo
     cliente: dict con info del cliente
     productos_vendidos: lista de dicts {nombre, cantidad, precio_unitario}
     gestor_info: dict opcional con datos del vendedor/chofer
-    logo_path: ruta opcional a logo de la empresa
+    logo_path: ruta local a logo de la empresa
     """
     buffer = BytesIO()
     c = canvas.Canvas(buffer, pagesize=letter)
     width, height = letter
-    styles = getSampleStyleSheet()
+    line_height = 15
 
-    import os
-    from reportlab.lib.utils import ImageReader
+    # Cargar logo local
+    logo = None
+    if os.path.exists(logo_path):
+        try:
+            logo = ImageReader(logo_path)
+        except Exception as e:
+            print(f"No se pudo cargar el logo: {e}")
+
     def dibujar_factura(y_offset=0):
         nonlocal c
-        
-        # Logo
-        if logo_path and os.path.exists(logo_path):
-            try:
-                logo = ImageReader(logo_path)
-                logo_width = 80  # ancho en puntos
-                logo_height = 70  # alto en puntos
-                c.drawImage(logo, 40, height - 85 - y_offset, width=logo_width, height=logo_height, preserveAspectRatio=True)
-            except Exception as e:
-                print(f"No se pudo cargar el logo: {e}")
-        
-        # ---------------------------
-        # Información de la empresa
-        # ---------------------------
+
+        # ---------------- Logo ----------------
+        if logo:
+            c.drawImage(logo, 40, height - 85 - y_offset, width=80, height=70, preserveAspectRatio=True)
+
+        # ------------- Empresa ----------------
         c.setFont("Helvetica-Bold", 14)
         c.drawString(130, height - 50 - y_offset, "Omar Galíndez Ramirez. CI: 85082506984")
         c.setFont("Helvetica", 10)
         c.drawString(130, height - 65 - y_offset, f"Factura N°: {venta.get('numero', venta.get('id',''))}")
-        c.drawString(130, height - 80 - y_offset, f"Fecha: {str(venta.get('fecha',''))}")
+        c.drawString(130, height - 80 - y_offset, f"Fecha: {venta.get('fecha','')}")
 
-        # ---------------------------
-        # Columnas: Cliente y Totales
-        # ---------------------------
-        c.setFont("Helvetica", 9)
+        # ------------- Columnas ----------------
         col1_x = 40
         col2_x = 320
         row_y = height - 110 - y_offset
-        line_height = 15
 
-        # Cliente
+        # Campos cliente, vacíos si no hay info
         cliente_nombre = cliente.get("nombre") or ""
         cliente_ci = cliente.get("ci") or ""
         cliente_chapa = cliente.get("chapa") or ""
         cliente_direccion = cliente.get("direccion") or ""
         cliente_telefono = cliente.get("telefono") or ""
 
-
         c.drawString(col1_x, row_y, f"Cliente: {cliente_nombre}"); row_y -= line_height
         c.drawString(col1_x, row_y, f"Carnet/ID: {cliente_ci}"); row_y -= line_height
         c.drawString(col1_x, row_y, f"Chapa: {cliente_chapa}"); row_y -= line_height
         c.drawString(col1_x, row_y, f"Dirección: {cliente_direccion}"); row_y -= line_height
-        c.drawString(col1_x, row_y, f"Teléfono: {cliente_telefono}")
+        c.drawString(col1_x, row_y, f"Teléfono: {cliente_telefono}"); row_y -= line_height
 
         # Totales y pagos
-        total = float(venta.get("total") or 0.0)
-        pagado_usd = float(venta.get("pagado") or 0.0)
-        saldo = float(venta.get("saldo") or 0.0)
+        total = float(venta.get("total") or 0)
+        pagado_usd = float(venta.get("pagado") or 0)
+        saldo = float(venta.get("saldo") or 0)
         metodo_pago = venta.get("tipo_pago") or ""
         vendedor = gestor_info.get("vendedor","") if gestor_info else ""
         chofer = gestor_info.get("chofer","") if gestor_info else ""
-        chapa = gestor_info.get("chapa","") if gestor_info else ""
+        chapa_vehiculo = gestor_info.get("chapa","") if gestor_info else ""
         observaciones = venta.get("observaciones","")
 
         tasa_cup = 120
@@ -246,11 +240,9 @@ def generar_factura_pdf(venta, cliente, productos_vendidos, gestor_info=None, lo
             c.drawString(col2_x, row_y2, f"Observaciones: {observaciones}"); row_y2 -= line_height
         c.drawString(col2_x, row_y2, f"Vendedor: {vendedor}"); row_y2 -= line_height
         c.drawString(col2_x, row_y2, f"Chofer: {chofer}"); row_y2 -= line_height
-        c.drawString(col2_x, row_y2, f"Chapa: {chapa}"); row_y2 -= line_height
+        c.drawString(col2_x, row_y2, f"Chapa: {chapa_vehiculo}"); row_y2 -= line_height
 
-        # ---------------------------
-        # Tabla de productos
-        # ---------------------------
+        # ------------- Tabla de productos ----------------
         table_y_start = row_y - 40
         table_data = [["Producto", "Cantidad", "Precio Unitario", "Subtotal"]]
         for p in productos_vendidos:
@@ -268,10 +260,10 @@ def generar_factura_pdf(venta, cliente, productos_vendidos, gestor_info=None, lo
             ('GRID', (0,0), (-1,-1), 1, colors.black),
             ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold')
         ]))
-        table.wrapOn(c, 50, table_y_start -20)
+        table.wrapOn(c, 50, table_y_start - 20)
         table.drawOn(c, 50, table_y_start - len(table_data)*18 - 20)
 
-        # Firma doble
+        # ------------- Firma doble ----------------
         firma_y = table_y_start - len(table_data)*18 - 60
         c.drawString(40, firma_y -30, "__________________________")
         c.drawString(40, firma_y - 40, "Firma Cliente")

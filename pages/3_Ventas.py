@@ -208,13 +208,13 @@ productos_vendidos = venta_obj.get("productos_vendidos", [])
 
 
 # ===========================
-# FORMULARIO DE DATOS PARA FACTURA
+# 2) FORMULARIO DE DATOS PARA FACTURA
 # ===========================
 with st.form("form_datos_factura"):
     st.subheader("✏️ Datos adicionales (solo para la factura)")
 
     observaciones = st.text_area("Observaciones", value=venta_obj.get("observaciones", ""))
-    
+
     col1, col2 = st.columns(2)
     with col1:
         vendedor = st.text_input("Vendedor", value=venta_obj.get("vendedor", ""))
@@ -223,40 +223,36 @@ with st.form("form_datos_factura"):
         telefono_vendedor = st.text_input("Teléfono del Vendedor", value=venta_obj.get("telefono_vendedor", ""))
         chapa = st.text_input("Chapa", value=venta_obj.get("chapa", ""))
 
-    # Botón de formulario para GENERAR PDF
-    generar = st.form_submit_button("🖨️ Generar Factura PDF")
+    generar_y_descargar = st.form_submit_button("🖨️ Generar y Descargar Factura PDF")
 
 # ===========================
-# DESCARGA FUERA DEL FORMULARIO
+# 3) GENERAR PDF Y DESCARGA
 # ===========================
-if generar:
-    # Guardamos solo en memoria
-    venta_obj.update({
-        "observaciones": observaciones,
-        "vendedor": vendedor,
-        "telefono_vendedor": telefono_vendedor,
-        "chofer": chofer,
-        "chapa": chapa
-    })
+if generar_y_descargar:
+    # Guardamos los datos solo en memoria (NO BD)
+    venta_obj["observaciones"] = observaciones
+    venta_obj["vendedor"] = vendedor
+    venta_obj["telefono_vendedor"] = telefono_vendedor
+    venta_obj["chofer"] = chofer
+    venta_obj["chapa"] = chapa
+
     st.session_state.ventas_dict[venta_sel] = venta_obj
 
+    # Definir gestor_info **antes de usarlo**
     gestor_info = {
         "vendedor": f"{vendedor} (+53 {telefono_vendedor})" if vendedor else "",
         "chofer": chofer,
         "chapa": chapa
     }
 
-    # Generar PDF
     pdf_bytes = ventas.generar_factura_pdf(
         venta_obj,
         cliente_obj,
         productos_vendidos,
         gestor_info=gestor_info,
-        logo_path="assets/logo.png"  
+        logo_path="assets/logo.png"
     )
 
-
-    # DESCARGA INMEDIATA
     st.download_button(
         label=f"⬇️ Descargar Factura PDF {venta_obj.get('id')}",
         data=pdf_bytes,
