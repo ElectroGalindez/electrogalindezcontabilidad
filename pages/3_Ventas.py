@@ -184,8 +184,21 @@ st.title("💳 Generar Factura Profesional en PDF")
 # ===========================
 # 1) SELECCIÓN DE VENTA
 # ===========================
-if "ventas_dict" not in st.session_state:
-    ventas_list = ventas.list_sales()
+
+# Cargar ventas actuales desde la base de datos
+ventas_list = ventas.list_sales()
+
+# Inicializar contador para detectar cambios
+if "ventas_count" not in st.session_state:
+    st.session_state.ventas_count = len(ventas_list)
+
+# Si cambió la cantidad de ventas → actualizar diccionario
+if len(ventas_list) != st.session_state.ventas_count:
+    st.session_state.ventas_dict = None
+    st.session_state.ventas_count = len(ventas_list)
+
+# Crear el diccionario si no existe o si fue forzado a actualizarse
+if "ventas_dict" not in st.session_state or st.session_state.ventas_dict is None:
     st.session_state.ventas_dict = {
         f"ID {v['id']} - Cliente {v.get('cliente_id','N/A')} - Total ${v.get('total', 0):.2f}": v
         for v in ventas_list
@@ -205,6 +218,7 @@ if not cliente_obj:
     st.stop()
 
 productos_vendidos = venta_obj.get("productos_vendidos", [])
+
 
 
 # ===========================
