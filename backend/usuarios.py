@@ -69,6 +69,13 @@ def autenticar_usuario(username, password, max_intentos=5, bloqueo_min=15):
         conn.execute(q_update, {"intentos": intentos, "bloqueado": bloqueado, "username": username})
     return None
 
+
+def login(username, password):
+    """
+    Alias para autenticar_usuario (mantiene compatibilidad para UI de escritorio).
+    """
+    return autenticar_usuario(username, password)
+
 # --------------------------------------------
 def cambiar_password(username, new_password, actor=None):
     hashed = bcrypt.hashpw(new_password.encode(), bcrypt.gensalt()).decode()
