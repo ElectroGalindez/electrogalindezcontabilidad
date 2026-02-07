@@ -1,46 +1,42 @@
 # backend/logs.py
 from datetime import datetime
 from typing import List, Dict, Any
-from sqlalchemy import text
-from .db import engine  # Función que devuelve conexión SQLAlchemy
+from .db import get_connection
 
 # ---------------------------
 # Registrar un log
 # ---------------------------
 
 def registrar_log(usuario, accion, detalles=None):
-    with engine.begin() as conn:  # usa begin() para transacción automática
+    with get_connection() as conn:
         conn.execute(
-            text(
-                "INSERT INTO logs (usuario, accion, detalles, fecha) "
-                "VALUES (:usuario, :accion, :detalles, :fecha)"
+            "INSERT INTO logs (usuario, accion, detalles, fecha) VALUES (?, ?, ?, ?)",
+            (
+                usuario,
+                accion,
+                str(detalles or {}),
+                datetime.now().isoformat(),
             ),
-            {
-                "usuario": usuario,
-                "accion": accion,
-                "detalles": str(detalles or {}),
-                "fecha": datetime.now()
-            }
         )
 
 # ---------------------------
 # Listar todos los logs
 # ---------------------------
 def listar_logs() -> List[Dict[str, Any]]:
-    with engine.connect() as conn:
-        result = conn.execute(text("SELECT * FROM logs ORDER BY fecha DESC"))
+    with get_connection() as conn:
+        result = conn.execute("SELECT * FROM logs ORDER BY fecha DESC")
         return [dict(row) for row in result.fetchall()]
 
 
 def obtener_logs_usuario(username: str):
     """Devuelve los registros del historial de acciones de un usuario."""
-    query = text("""
+    query = """
         SELECT usuario, accion, fecha, detalles
         FROM logs
-        WHERE usuario = :usuario
+        WHERE usuario = ?
         ORDER BY fecha DESC
         LIMIT 100
-    """)
-    with engine.connect() as conn:
-        result = conn.execute(query, {"usuario": username})
-        return [row._asdict() for row in result]
+    """
+    with get_connection() as conn:
+        result = conn.execute(query, (username,))
+        return [dict(row) for row in result.fetchall()]

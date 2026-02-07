@@ -1,8 +1,7 @@
 # backend/ventas.py
 from typing import  Dict, Optional
 from datetime import datetime
-from sqlalchemy import text
-from backend.db import engine
+from backend.db import get_connection
 from .productos import  get_product, update_product
 from .logs import registrar_log
 import json
@@ -14,10 +13,10 @@ def register_sale(cliente_id, total, pagado, usuario, tipo_pago, productos=None)
     """
     Registra una venta, descuenta del inventario y guarda productos vendidos como JSON.
     """
-    fecha = datetime.now()
+    fecha = datetime.now().isoformat()
     productos_data = []
 
-    with engine.begin() as conn:
+    with get_connection() as conn:
         # Preparar productos para guardar en JSON
         if productos:
             for item in productos:
@@ -42,12 +41,11 @@ def register_sale(cliente_id, total, pagado, usuario, tipo_pago, productos=None)
                     update_product(prod_id, nombre=producto["nombre"], cantidad=nuevo_stock, precio=producto["precio"])
 
         # Guardar venta con productos en JSON
-        query_venta = text("""
+        query_venta = """
             INSERT INTO ventas (cliente_id, total, pagado, usuario, tipo_pago, fecha, productos_vendidos)
             VALUES (:cliente_id, :total, :pagado, :usuario, :tipo_pago, :fecha, :productos_vendidos)
-            RETURNING id
-        """)
-        venta_id = conn.execute(query_venta, {
+        """
+        cursor = conn.execute(query_venta, {
             "cliente_id": cliente_id,
             "total": total,
             "pagado": pagado,
@@ -55,7 +53,8 @@ def register_sale(cliente_id, total, pagado, usuario, tipo_pago, productos=None)
             "tipo_pago": tipo_pago,
             "fecha": fecha,
             "productos_vendidos": json.dumps(productos_data)  # 🔹 Aquí se guarda el detalle
-        }).scalar()
+        })
+        venta_id = cursor.lastrowid
 
         registrar_log(usuario, "registrar_venta", {"venta_id": venta_id, "total": total, "pagado": pagado})
 
@@ -70,8 +69,8 @@ def editar_venta_extra(
     chapa: Optional[str] = None,
     usuario: Optional[str] = None
 ):
-    with engine.begin() as conn:
-        update_query = text("""
+    with get_connection() as conn:
+        update_query = """
             UPDATE ventas
             SET observaciones = COALESCE(:observaciones, observaciones),
                 vendedor = COALESCE(:vendedor, vendedor),
@@ -79,17 +78,16 @@ def editar_venta_extra(
                 chofer = COALESCE(:chofer, chofer),
                 chapa = COALESCE(:chapa, chapa)
             WHERE id = :id
-            RETURNING *
-        """)
-
-        updated = conn.execute(update_query, {
+        """
+        conn.execute(update_query, {
             "id": sale_id,
             "observaciones": observaciones,
             "vendedor": vendedor,
             "telefono_vendedor": telefono_vendedor,
             "chofer": chofer,
             "chapa": chapa
-        }).mappings().first()
+        })
+        updated = conn.execute("SELECT * FROM ventas WHERE id = ?", (sale_id,)).fetchone()
 
         if updated:
             registrar_log(usuario or "sistema", "editar_venta_extra", dict(updated))
@@ -102,13 +100,13 @@ def editar_venta_extra(
 # Listar ventas
 # ----------------------------
 def list_sales():
-    query = text("SELECT * FROM ventas ORDER BY fecha DESC")
-    with engine.connect() as conn:
-        resultados = conn.execute(query).mappings().all()
+    query = "SELECT * FROM ventas ORDER BY fecha DESC"
+    with get_connection() as conn:
+        resultados = conn.execute(query).fetchall()
 
     ventas_list = []
     for r in resultados:
-        productos_vendidos = r.get("productos_vendidos") or "[]"
+        productos_vendidos = r["productos_vendidos"] if r["productos_vendidos"] is not None else "[]"
         if isinstance(productos_vendidos, str):
             try:
                 productos_vendidos = json.loads(productos_vendidos)
@@ -116,6 +114,11 @@ def list_sales():
                 productos_vendidos = []
 
         r_dict = dict(r)
+        if isinstance(r_dict.get("fecha"), str):
+            try:
+                r_dict["fecha"] = datetime.fromisoformat(r_dict["fecha"])
+            except ValueError:
+                pass
         r_dict["productos_vendidos"] = productos_vendidos
         ventas_list.append(r_dict)
 
@@ -124,12 +127,17 @@ def list_sales():
 
 def get_sale(sale_id: str) -> Optional[Dict]:
     """Devuelve una venta por su ID"""
-    query = text("SELECT * FROM ventas WHERE id = :id")
-    with engine.connect() as conn:
-        result = conn.execute(query, {"id": sale_id}).mappings().first()
+    query = "SELECT * FROM ventas WHERE id = ?"
+    with get_connection() as conn:
+        result = conn.execute(query, (sale_id,)).fetchone()
     if result:
         r = dict(result)
-        r["productos_vendidos"] = json.loads(r["productos_vendidos"])
+        if isinstance(r.get("fecha"), str):
+            try:
+                r["fecha"] = datetime.fromisoformat(r["fecha"])
+            except ValueError:
+                pass
+        r["productos_vendidos"] = json.loads(r["productos_vendidos"] or "[]")
         return r
     return None
 
@@ -141,8 +149,8 @@ def delete_sale(sale_id: str, usuario: Optional[str] = None) -> bool:
     if not sale:
         return False
 
-    with engine.begin() as conn:
-        conn.execute(text("DELETE FROM ventas WHERE id = :id"), {"id": sale_id})
+    with get_connection() as conn:
+        conn.execute("DELETE FROM ventas WHERE id = ?", (sale_id,))
 
     registrar_log(usuario or "sistema", "eliminar_venta", {"venta_id": sale_id, "venta": sale})
     return True

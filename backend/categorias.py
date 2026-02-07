@@ -1,6 +1,5 @@
 # backend/categorias.py
-from sqlalchemy import text
-from .db import engine
+from .db import get_connection
 from .logs import registrar_log
 from typing import Optional, Dict, List
 
@@ -10,16 +9,16 @@ from typing import Optional, Dict, List
 
 def list_categories() -> List[Dict]:
     """Devuelve todas las categorías con su id desde la DB"""
-    query = text("SELECT id, nombre FROM categorias ORDER BY nombre ASC")
-    with engine.connect() as conn:
+    query = "SELECT id, nombre FROM categorias ORDER BY nombre ASC"
+    with get_connection() as conn:
         result = conn.execute(query)
-        return [dict(row) for row in result.mappings().all()]
+        return [dict(row) for row in result.fetchall()]
 
 def get_category(cat_id: int) -> Optional[Dict]:
     """Devuelve una categoría específica por su id"""
-    query = text("SELECT id, nombre FROM categorias WHERE id = :id")
-    with engine.connect() as conn:
-        result = conn.execute(query, {"id": cat_id}).mappings().first()
+    query = "SELECT id, nombre FROM categorias WHERE id = ?"
+    with get_connection() as conn:
+        result = conn.execute(query, (cat_id,)).fetchone()
         return dict(result) if result else None
 
 def agregar_categoria(nombre: str, usuario: str = None) -> str:
@@ -33,8 +32,8 @@ def agregar_categoria(nombre: str, usuario: str = None) -> str:
     if nombre.lower() in categorias:
         raise ValueError(f"La categoría '{nombre}' ya existe.")
 
-    query = text("INSERT INTO categorias (nombre) VALUES (:nombre)")
-    with engine.begin() as conn:
+    query = "INSERT INTO categorias (nombre) VALUES (:nombre)"
+    with get_connection() as conn:
         conn.execute(query, {"nombre": nombre})
 
     registrar_log(usuario or "sistema", "crear_categoria", {"nombre": nombre})
@@ -54,8 +53,8 @@ def editar_categoria(cat_id: int, nombre_nuevo: str, usuario: str = None) -> str
     if nombre_nuevo.lower() in categorias:
         raise ValueError(f"La categoría '{nombre_nuevo}' ya existe.")
 
-    query = text("UPDATE categorias SET nombre = :nombre_nuevo WHERE id = :cat_id")
-    with engine.begin() as conn:
+    query = "UPDATE categorias SET nombre = :nombre_nuevo WHERE id = :cat_id"
+    with get_connection() as conn:
         conn.execute(query, {"nombre_nuevo": nombre_nuevo, "cat_id": cat_id})
 
     registrar_log(usuario or "sistema", "editar_categoria", {
@@ -65,9 +64,13 @@ def editar_categoria(cat_id: int, nombre_nuevo: str, usuario: str = None) -> str
     return nombre_nuevo
 
 def eliminar_categoria(cat_id: int, usuario: str = None):
-    with engine.begin() as conn:
-        res = conn.execute(text("DELETE FROM categorias WHERE id = :id RETURNING id, nombre"), {"id": cat_id})
-        row = res.mappings().first()
+    with get_connection() as conn:
+        row = conn.execute(
+            "SELECT id, nombre FROM categorias WHERE id = ?",
+            (cat_id,),
+        ).fetchone()
+        if row:
+            conn.execute("DELETE FROM categorias WHERE id = ?", (cat_id,))
     if row:
         registrar_log(usuario or "sistema", "eliminar_categoria", dict(row))
         return dict(row)
@@ -76,7 +79,7 @@ def eliminar_categoria(cat_id: int, usuario: str = None):
 
 def list_products_by_category(categoria_id: int) -> list[dict]:
     """Devuelve todos los productos de una categoría específica"""
-    query = text("SELECT * FROM productos WHERE categoria_id = :categoria_id ORDER BY nombre")
-    with engine.connect() as conn:
-        result = conn.execute(query, {"categoria_id": categoria_id})
-        return [dict(row) for row in result.mappings().all()]
+    query = "SELECT * FROM productos WHERE categoria_id = ? ORDER BY nombre"
+    with get_connection() as conn:
+        result = conn.execute(query, (categoria_id,))
+        return [dict(row) for row in result.fetchall()]

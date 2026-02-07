@@ -1,8 +1,7 @@
 # backend/usuarios.py
 from datetime import datetime, timedelta
 import bcrypt
-from sqlalchemy import text
-from backend.db import engine
+from backend.db import get_connection
 from .logs import registrar_log
 
 # ============================================
@@ -12,12 +11,12 @@ from .logs import registrar_log
 def crear_usuario(username, password, rol="empleado", actor=None):
     """Crea un usuario con password encriptado."""
     hashed = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
-    query = text("""
+    query = """
         INSERT INTO usuarios (username, password, rol)
         VALUES (:username, :password, :rol)
-    """)
+    """
     try:
-        with engine.begin() as conn:  # begin() → asegura commit/rollback automático
+        with get_connection() as conn:
             conn.execute(query, {"username": username, "password": hashed, "rol": rol})
         registrar_log(usuario=actor or username, accion="crear_usuario", detalles={"username": username, "rol": rol})
         return {"username": username, "rol": rol}
@@ -28,29 +27,31 @@ def crear_usuario(username, password, rol="empleado", actor=None):
 def autenticar_usuario(username, password, max_intentos=5, bloqueo_min=15):
     """Autentica usuario, maneja intentos fallidos y bloqueo temporal."""
     now = datetime.now()
-    q_select = text("""
+    q_select = """
         SELECT password, activo, intentos_fallidos, bloqueado_hasta, rol 
         FROM usuarios WHERE username=:username
-    """)
-    q_reset = text("""
+    """
+    q_reset = """
         UPDATE usuarios 
         SET intentos_fallidos=0, bloqueado_hasta=NULL 
         WHERE username=:username
-    """)
-    q_update = text("""
+    """
+    q_update = """
         UPDATE usuarios 
         SET intentos_fallidos=:intentos, bloqueado_hasta=:bloqueado 
         WHERE username=:username
-    """)
+    """
 
-    with engine.begin() as conn:
-        row = conn.execute(q_select, {"username": username}).mappings().first()
+    with get_connection() as conn:
+        row = conn.execute(q_select, {"username": username}).fetchone()
         if not row or not row["activo"]:
             return None  # Usuario no existe o está desactivado
 
         # Si está bloqueado
-        if row["bloqueado_hasta"] and row["bloqueado_hasta"] > now:
-            return {"bloqueado": True, "bloqueado_hasta": row["bloqueado_hasta"].isoformat()}
+        if row["bloqueado_hasta"]:
+            bloqueado_hasta = datetime.fromisoformat(row["bloqueado_hasta"])
+            if bloqueado_hasta > now:
+                return {"bloqueado": True, "bloqueado_hasta": bloqueado_hasta.isoformat()}
 
         # Contraseña correcta
         if bcrypt.checkpw(password.encode(), row["password"].encode()):
@@ -68,12 +69,19 @@ def autenticar_usuario(username, password, max_intentos=5, bloqueo_min=15):
         conn.execute(q_update, {"intentos": intentos, "bloqueado": bloqueado, "username": username})
     return None
 
+
+def login(username, password):
+    """
+    Alias para autenticar_usuario (mantiene compatibilidad para UI de escritorio).
+    """
+    return autenticar_usuario(username, password)
+
 # --------------------------------------------
 def cambiar_password(username, new_password, actor=None):
     hashed = bcrypt.hashpw(new_password.encode(), bcrypt.gensalt()).decode()
-    with engine.begin() as conn:
+    with get_connection() as conn:
         conn.execute(
-            text("UPDATE usuarios SET password=:p, requiere_cambio_password=FALSE WHERE username=:u"),
+            "UPDATE usuarios SET password=:p, requiere_cambio_password=0 WHERE username=:u",
             {"p": hashed, "u": username}
         )
     registrar_log(usuario=actor or username, accion="cambiar_password", detalles={"username": username})
@@ -82,9 +90,9 @@ def cambiar_password(username, new_password, actor=None):
 # --------------------------------------------
 def cambiar_rol(username, nuevo_rol, actor=None):
     old_rol = get_rol(username)
-    with engine.begin() as conn:
+    with get_connection() as conn:
         conn.execute(
-            text("UPDATE usuarios SET rol=:r WHERE username=:u"),
+            "UPDATE usuarios SET rol=:r WHERE username=:u",
             {"r": nuevo_rol, "u": username}
         )
     registrar_log(usuario=actor or username, accion="cambiar_rol",
@@ -94,10 +102,10 @@ def cambiar_rol(username, nuevo_rol, actor=None):
 # --------------------------------------------
 def set_estado_usuario(username, activo: bool, actor=None):
     """Activa o desactiva usuario (uso unificado)."""
-    with engine.begin() as conn:
+    with get_connection() as conn:
         conn.execute(
-            text("UPDATE usuarios SET activo=:a WHERE username=:u"),
-            {"a": activo, "u": username}
+            "UPDATE usuarios SET activo=:a WHERE username=:u",
+            {"a": int(activo), "u": username}
         )
     accion = "activar_usuario" if activo else "desactivar_usuario"
     registrar_log(usuario=actor or username, accion=accion, detalles={"username": username})
@@ -105,17 +113,17 @@ def set_estado_usuario(username, activo: bool, actor=None):
 
 # --------------------------------------------
 def listar_usuarios():
-    with engine.connect() as conn:
-        rows = conn.execute(text("""
+    with get_connection() as conn:
+        rows = conn.execute("""
             SELECT username, rol, activo, created_at, requiere_cambio_password
             FROM usuarios ORDER BY created_at DESC
-        """)).mappings().all()
+        """).fetchall()
     return [
         {
             "username": r["username"],
             "rol": r["rol"],
             "activo": r["activo"],
-            "created_at": r["created_at"].isoformat() if r["created_at"] else None,
+            "created_at": r["created_at"],
             "requiere_cambio_password": r["requiere_cambio_password"]
         }
         for r in rows
@@ -123,20 +131,22 @@ def listar_usuarios():
 
 # --------------------------------------------
 def requiere_cambio_password(username):
-    with engine.connect() as conn:
+    with get_connection() as conn:
         row = conn.execute(
-            text("SELECT requiere_cambio_password FROM usuarios WHERE username=:u"),
-            {"u": username}
-        ).scalar()
-    return bool(row)
+            "SELECT requiere_cambio_password FROM usuarios WHERE username=:u",
+            {"u": username},
+        ).fetchone()
+    row_val = row[0] if row else 0
+    return bool(row_val)
 
 # --------------------------------------------
 def get_rol(username):
-    with engine.connect() as conn:
-        return conn.execute(
-            text("SELECT rol FROM usuarios WHERE username=:u"),
-            {"u": username}
-        ).scalar()
+    with get_connection() as conn:
+        row = conn.execute(
+            "SELECT rol FROM usuarios WHERE username=:u",
+            {"u": username},
+        ).fetchone()
+    return row[0] if row else None
 
 # --------------------------------------------
 def obtener_logs_usuario(username):
@@ -152,9 +162,9 @@ def desactivar_usuario(username, actor=None):
 # --------------------------------------------
 def eliminar_usuario(username, actor=None):
     """Elimina un usuario de la base de datos."""
-    with engine.begin() as conn:
+    with get_connection() as conn:
         conn.execute(
-            text("DELETE FROM usuarios WHERE username=:u"),
+            "DELETE FROM usuarios WHERE username=:u",
             {"u": username}
         )
     registrar_log(usuario=actor or username, accion="eliminar_usuario", detalles={"username": username})

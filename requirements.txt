@@ -13,18 +13,11 @@ openpyxl>=3.0
 # Security / Auth
 bcrypt>=4.0
 
-# Database
-sqlalchemy>=2.0
-psycopg2-binary>=2.9
-
 # File handling / concurrency
 filelock>=3.12
 
 # Twilio (SMS)
 twilio>=8.0
-
-# Environment variables
-python-dotenv>=1.0
 
 # PDF generation
 fpdf2==2.7.9
@@ -34,6 +27,9 @@ python-dateutil>=2.8
 
 # Desktop app wrapper
 pywebview>=4.4
+
+# Desktop app (Qt)
+PySide6>=6.6
 
 # Reporting
 reportlab
