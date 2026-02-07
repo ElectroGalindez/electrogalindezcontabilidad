@@ -1,14 +1,16 @@
 from typing import Dict, Any, Optional
-from sqlalchemy import text
-from .db import engine
+from .db import get_connection
 from .logs import registrar_log
 
 def get_client(cliente_id: str) -> Optional[Dict[str, Any]]:
     """Obtiene un cliente por ID"""
-    with engine.connect() as conn:
-        result = conn.execute(text("SELECT id, nombre, telefono, ci, chapa, direccion, deuda_total FROM clientes WHERE id = :id"), {"id": cliente_id})
-        row = result.first()
-        return dict(row._mapping) if row else None
+    with get_connection() as conn:
+        result = conn.execute(
+            "SELECT id, nombre, telefono, ci, chapa, direccion, deuda_total FROM clientes WHERE id = ?",
+            (cliente_id,),
+        )
+        row = result.fetchone()
+        return dict(row) if row else None
 
 
 
@@ -18,19 +20,19 @@ def add_client(nombre, telefono, ci, direccion, chapa, usuario=None):
     Si se pasa 'usuario', se registra quién realizó la acción en la auditoría.
     """
     try:
-        with engine.begin() as conn:
+        with get_connection() as conn:
             conn.execute(
-                text("""
+                """
                     INSERT INTO clientes (nombre, telefono, ci, direccion, chapa)
                     VALUES (:nombre, :telefono, :ci, :direccion, :chapa)
-                """),
+                """,
                 {
                     "nombre": nombre.strip(),
                     "telefono": telefono.strip() if telefono else None,
                     "ci": ci.strip() if ci else None,
                     "direccion": direccion.strip() if direccion else None,
-                    "chapa": chapa.strip() if chapa else None
-                }
+                    "chapa": chapa.strip() if chapa else None,
+                },
             )
 
                 # Validar tipo de usuario antes de registrar el log
@@ -48,11 +50,11 @@ def add_client(nombre, telefono, ci, direccion, chapa, usuario=None):
             )
 
         # ✅ Obtener el cliente recién insertado
-        with engine.connect() as conn:
+        with get_connection() as conn:
             nuevo = conn.execute(
-                text("SELECT * FROM clientes ORDER BY id DESC LIMIT 1")
-            ).first()
-            return dict(nuevo._mapping) if nuevo else None
+                "SELECT * FROM clientes ORDER BY id DESC LIMIT 1"
+            ).fetchone()
+            return dict(nuevo) if nuevo else None
 
     except Exception as e:
         print(f"❌ Error al crear cliente: {e}")
@@ -63,7 +65,7 @@ def update_client(cliente_id: str, nombre=None, telefono=None, ci=None, chapa=No
     Actualiza los datos de un cliente existente en la base de datos.
     Parámetros opcionales: nombre, telefono, ci, chapa, direccion
     """
-    with engine.begin() as conn:
+    with get_connection() as conn:
         cliente = get_client(cliente_id)
         if not cliente:
             raise ValueError(f"No existe el cliente con ID {cliente_id}")
@@ -75,7 +77,7 @@ def update_client(cliente_id: str, nombre=None, telefono=None, ci=None, chapa=No
         chapa = chapa or cliente.get("chapa", "")
         direccion = direccion or cliente.get("direccion", "")
 
-        query = text("""
+        query = """
             UPDATE clientes
             SET nombre = :nombre,
                 telefono = :telefono,
@@ -83,7 +85,7 @@ def update_client(cliente_id: str, nombre=None, telefono=None, ci=None, chapa=No
                 chapa = :chapa,
                 direccion = :direccion
             WHERE id = :id
-        """)
+        """
         conn.execute(query, {
             "id": cliente_id,
             "nombre": nombre,
@@ -99,8 +101,8 @@ def update_client(cliente_id: str, nombre=None, telefono=None, ci=None, chapa=No
 def delete_client(cliente_id: str, usuario: str = "sistema") -> bool:
     """Elimina un cliente"""
     try:
-        with engine.begin() as conn:
-            conn.execute(text("DELETE FROM clientes WHERE id = :id"), {"id": cliente_id})
+        with get_connection() as conn:
+            conn.execute("DELETE FROM clientes WHERE id = ?", (cliente_id,))
         registrar_log(usuario, "delete_client", {"id": cliente_id})
         return True
     except Exception as e:
@@ -110,12 +112,15 @@ def delete_client(cliente_id: str, usuario: str = "sistema") -> bool:
 def update_debt(cliente_id: str, monto: float, usuario: str = "sistema") -> Dict[str, Any]:
     """Actualiza la deuda del cliente de manera segura"""
     try:
-        with engine.begin() as conn:
-            conn.execute(text("""
+        with get_connection() as conn:
+            conn.execute(
+                """
                 UPDATE clientes
-                SET deuda_total = GREATEST(deuda_total + :monto, 0)
+                SET deuda_total = MAX(deuda_total + :monto, 0)
                 WHERE id = :id
-            """), {"id": cliente_id, "monto": monto})
+                """,
+                {"id": cliente_id, "monto": monto},
+            )
         registrar_log(usuario, "update_debt", {"id": cliente_id, "monto": monto})
         return get_client(cliente_id)
     except Exception as e:
@@ -124,9 +129,11 @@ def update_debt(cliente_id: str, monto: float, usuario: str = "sistema") -> Dict
 
 def list_clients() -> list[Dict[str, Any]]:
     """Lista todos los clientes con campos esenciales"""
-    with engine.connect() as conn:
-        result = conn.execute(text("SELECT id, nombre, telefono, ci, chapa, direccion, deuda_total FROM clientes ORDER BY nombre"))
-        return [dict(r._mapping) for r in result]
+    with get_connection() as conn:
+        result = conn.execute(
+            "SELECT id, nombre, telefono, ci, chapa, direccion, deuda_total FROM clientes ORDER BY nombre"
+        )
+        return [dict(r) for r in result.fetchall()]
 
 def edit_client(cliente_id: str, nombre: Optional[str] = None, telefono: Optional[str] = None,
                 ci: Optional[str] = None, chapa: Optional[str] = None, direccion: Optional[str] = None,
