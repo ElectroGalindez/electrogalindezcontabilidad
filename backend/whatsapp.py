@@ -1,20 +1,37 @@
-# backend/whatsapp.py
-"""
-Módulo para enviar mensajes de WhatsApp usando Twilio API.
-"""
-from twilio.rest import Client
+"""Twilio WhatsApp helper module."""
+
 import os
+
+from twilio.rest import Client
+
 
 def enviar_whatsapp(mensaje, destinatario=None):
     """
     Envía un mensaje de WhatsApp usando Twilio.
     destinatario: número en formato internacional, ej: 'whatsapp:+549XXXXXXXXXX'
     """
-    # Configuración desde variables de entorno o hardcodear para pruebas
-    account_sid = os.getenv('TWILIO_ACCOUNT_SID', 'TU_SID_AQUI')
-    auth_token = os.getenv('TWILIO_AUTH_TOKEN', 'TU_TOKEN_AQUI')
-    from_whatsapp = os.getenv('TWILIO_WHATSAPP_FROM', 'whatsapp:+14155238886')  # Twilio sandbox
-    to_whatsapp = destinatario or os.getenv('TWILIO_WHATSAPP_TO', 'whatsapp:+549XXXXXXXXXX')
+    # Configuración desde variables de entorno
+    account_sid = os.getenv("TWILIO_ACCOUNT_SID")
+    auth_token = os.getenv("TWILIO_AUTH_TOKEN")
+    from_whatsapp = os.getenv("TWILIO_WHATSAPP_FROM")
+    to_whatsapp = destinatario or os.getenv("TWILIO_WHATSAPP_TO")
+
+    missing = [
+        name
+        for name, value in {
+            "TWILIO_ACCOUNT_SID": account_sid,
+            "TWILIO_AUTH_TOKEN": auth_token,
+            "TWILIO_WHATSAPP_FROM": from_whatsapp,
+            "TWILIO_WHATSAPP_TO": to_whatsapp,
+        }.items()
+        if not value
+    ]
+    if missing:
+        raise RuntimeError(
+            "Faltan variables de entorno para Twilio: "
+            + ", ".join(missing)
+            + ". Configúralas en tu .env o entorno."
+        )
 
     client = Client(account_sid, auth_token)
     message = client.messages.create(

@@ -1,14 +1,13 @@
-# migrate_to_neon.py
+"""Utility script to migrate the schema to a Neon/PostgreSQL database."""
+
+from __future__ import annotations
+
 import os
+
 import psycopg2
 from dotenv import load_dotenv
 
-# Cargar variables de entorno
-load_dotenv()
-DATABASE_URL = os.getenv("DATABASE_URL")
-
-# Esquema de la base de datos (ajústalo a tus tablas actuales)
-schema_sql = """
+SCHEMA_SQL = """
 -- Tabla de clientes
 CREATE TABLE IF NOT EXISTS clientes (
     id SERIAL PRIMARY KEY,
@@ -57,12 +56,29 @@ CREATE TABLE IF NOT EXISTS deudas (
 );
 """
 
-# Conectar a Neon y ejecutar esquema
-try:
-    with psycopg2.connect(DATABASE_URL) as conn:
+
+def migrate_schema(database_url: str) -> None:
+    """Apply the schema to a PostgreSQL database."""
+    with psycopg2.connect(database_url) as conn:
         with conn.cursor() as cur:
-            cur.execute(schema_sql)
+            cur.execute(SCHEMA_SQL)
             conn.commit()
-    print("✅ Esquema migrado correctamente a Neon")
-except Exception as e:
-    print("❌ Error al migrar:", e)
+
+
+def main() -> None:
+    """Load env vars and run the schema migration."""
+    load_dotenv()
+    database_url = os.getenv("DATABASE_URL")
+    if not database_url:
+        raise RuntimeError("DATABASE_URL no está configurada en el entorno.")
+
+    try:
+        migrate_schema(database_url)
+        print("✅ Esquema migrado correctamente a Neon")
+    except Exception as exc:
+        print("❌ Error al migrar:", exc)
+        raise
+
+
+if __name__ == "__main__":
+    main()

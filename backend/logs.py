@@ -1,13 +1,13 @@
-# backend/logs.py
+"""Audit log helpers."""
+
 from datetime import datetime
-from typing import List, Dict, Any
+from typing import Any, Dict, List
+
 from .db import get_connection
 
-# ---------------------------
-# Registrar un log
-# ---------------------------
 
-def registrar_log(usuario, accion, detalles=None):
+def registrar_log(usuario: str, accion: str, detalles: Any = None) -> None:
+    """Registrar una acción en la tabla de logs."""
     with get_connection() as conn:
         conn.execute(
             "INSERT INTO logs (usuario, accion, detalles, fecha) VALUES (?, ?, ?, ?)",
@@ -19,17 +19,16 @@ def registrar_log(usuario, accion, detalles=None):
             ),
         )
 
-# ---------------------------
-# Listar todos los logs
-# ---------------------------
+
 def listar_logs() -> List[Dict[str, Any]]:
+    """Listar todos los logs registrados."""
     with get_connection() as conn:
         result = conn.execute("SELECT * FROM logs ORDER BY fecha DESC")
         return [dict(row) for row in result.fetchall()]
 
 
-def obtener_logs_usuario(username: str):
-    """Devuelve los registros del historial de acciones de un usuario."""
+def obtener_logs_usuario(username: str) -> List[Dict[str, Any]]:
+    """Devolver el historial de acciones de un usuario."""
     query = """
         SELECT usuario, accion, fecha, detalles
         FROM logs

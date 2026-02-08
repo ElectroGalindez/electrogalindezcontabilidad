@@ -1,0 +1,38 @@
+{
+  "name": "electrogalindez",
+  "version": "1.0.0",
+  "main": "main.js",
+  "description": "Electron wrapper for ElectroGalindez",
+  "author": "",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder"
+  },
+  "devDependencies": {
+    "electron": "^31.0.0",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.electrogalindez.app",
+    "productName": "ElectroGalindez",
+    "files": [
+      "main.js",
+      "dist/**",
+      "assets/**",
+      "backend/**",
+      "pages/**",
+      "ui/**"
+    ],
+    "mac": {
+      "target": [
+        "dmg"
+      ]
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ]
+    }
+  }
+}

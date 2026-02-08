@@ -1,3 +1,7 @@
-from backend.db import test_connection
+"""Smoke test for verifying SQLite connectivity."""
 
-test_connection()
+from .db import test_connection
+
+
+if __name__ == "__main__":
+    test_connection()
