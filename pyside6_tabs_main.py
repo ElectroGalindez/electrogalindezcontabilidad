@@ -161,6 +161,29 @@ class HistorialTab(QWidget):
         self.table.setHorizontalHeaderLabels(["ID", "Usuario", "Acción", "Detalle", "Fecha"])
         layout.addWidget(self.table)
 
+    def load_historial(self) -> None:
+        from backend import historial
+        from PySide6.QtWidgets import QMessageBox
+
+        try:
+            acciones = historial.listar_acciones()
+            self.table.setRowCount(0)
+            self.table.setRowCount(len(acciones))
+            for row_index, accion in enumerate(acciones):
+                detalle = accion.get("detalle", accion.get("detalles", ""))
+                valores = [
+                    accion.get("id", ""),
+                    accion.get("usuario", ""),
+                    accion.get("accion", ""),
+                    detalle,
+                    accion.get("fecha", ""),
+                ]
+                for col_index, valor in enumerate(valores):
+                    item = QTableWidgetItem(str(valor))
+                    self.table.setItem(row_index, col_index, item)
+        except Exception as exc:
+            QMessageBox.critical(self, "Error", str(exc))
+
 
 class MainWindow(QMainWindow):
     def __init__(self) -> None:
