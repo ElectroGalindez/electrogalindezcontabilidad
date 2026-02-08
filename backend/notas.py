@@ -1,15 +1,20 @@
-from typing import List, Dict, Optional
+"""Notes CRUD helpers."""
+
 from datetime import datetime
+from typing import Dict, List, Optional
+
 from .db import get_connection
 
 
 def list_notes() -> List[Dict]:
+    """Listar todas las notas."""
     with get_connection() as conn:
         rows = conn.execute("SELECT id, contenido, fecha FROM notas ORDER BY fecha DESC").fetchall()
         return [dict(row) for row in rows]
 
 
 def add_note(contenido: str) -> Dict:
+    """Agregar una nota nueva."""
     contenido = (contenido or "").strip()
     if not contenido:
         raise ValueError("El contenido de la nota no puede estar vacío.")
@@ -28,6 +33,7 @@ def add_note(contenido: str) -> Dict:
 
 
 def update_note(nota_id: int, contenido: str) -> Optional[Dict]:
+    """Actualizar el contenido de una nota existente."""
     contenido = (contenido or "").strip()
     if not contenido:
         raise ValueError("El contenido de la nota no puede estar vacío.")
@@ -44,6 +50,7 @@ def update_note(nota_id: int, contenido: str) -> Optional[Dict]:
 
 
 def delete_note(nota_id: int) -> bool:
+    """Eliminar una nota por ID."""
     with get_connection() as conn:
         row = conn.execute("SELECT id FROM notas WHERE id = ?", (nota_id,)).fetchone()
         if not row:

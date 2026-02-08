@@ -1,36 +1,27 @@
-import os
-import sqlite3
-import sys
+"""SQLite connection helpers and schema initialization."""
+
 from contextlib import contextmanager
 from datetime import datetime
+import sqlite3
+
+from core.paths import get_data_dir
 
 APP_NAME = "tu_app"
-BASE_DIR = os.path.dirname(os.path.dirname(__file__))
-
-
-def _resolve_data_dir() -> str:
-    if sys.platform.startswith("win"):
-        base = os.environ.get("LOCALAPPDATA") or os.path.expanduser("~\\AppData\\Local")
-        return os.path.join(base, APP_NAME)
-    if sys.platform == "darwin":
-        return os.path.join(os.path.expanduser("~/Library/Application Support"), APP_NAME)
-    return os.path.join(BASE_DIR, "data")
-
-
-DATA_DIR = _resolve_data_dir()
-os.makedirs(DATA_DIR, exist_ok=True)
-
-DB_PATH = os.path.join(DATA_DIR, "db.sqlite")
+DATA_DIR = get_data_dir(APP_NAME)
+DATA_DIR.mkdir(parents=True, exist_ok=True)
+DB_PATH = DATA_DIR / "db.sqlite"
 
 
 def _connect() -> sqlite3.Connection:
+    """Create a SQLite connection with row access by name."""
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn
 
 
 @contextmanager
-def get_connection():
+def get_connection() -> sqlite3.Connection:
+    """Yield a managed SQLite connection with commit/rollback handling."""
     conn = _connect()
     try:
         yield conn
@@ -43,6 +34,7 @@ def get_connection():
 
 
 def init_db() -> None:
+    """Create tables if they do not yet exist."""
     schema = [
         """
         CREATE TABLE IF NOT EXISTS usuarios (
@@ -155,6 +147,7 @@ def init_db() -> None:
 
 
 def test_connection() -> None:
+    """Check that the SQLite connection is working."""
     with _connect() as conn:
         result = conn.execute("SELECT datetime('now')").fetchone()
         print("Conexión SQLite exitosa ✅", result[0] if result else datetime.now().isoformat())

@@ -1,31 +1,35 @@
-# backend/categorias.py
+"""Category management helpers."""
+
+from typing import Dict, List, Optional
+
 from .db import get_connection
 from .logs import registrar_log
-from typing import Optional, Dict, List
 
-# ---------------------------
-# Funciones de categorías
-# ---------------------------
+
+def _normalize_nombre(nombre: str) -> str:
+    """Normalizar el nombre de una categoría."""
+    nombre = nombre.strip()
+    if not nombre:
+        raise ValueError("El nombre de la categoría no puede estar vacío.")
+    return nombre
 
 def list_categories() -> List[Dict]:
-    """Devuelve todas las categorías con su id desde la DB"""
+    """Listar todas las categorías disponibles."""
     query = "SELECT id, nombre FROM categorias ORDER BY nombre ASC"
     with get_connection() as conn:
         result = conn.execute(query)
         return [dict(row) for row in result.fetchall()]
 
 def get_category(cat_id: int) -> Optional[Dict]:
-    """Devuelve una categoría específica por su id"""
+    """Obtener una categoría específica por ID."""
     query = "SELECT id, nombre FROM categorias WHERE id = ?"
     with get_connection() as conn:
         result = conn.execute(query, (cat_id,)).fetchone()
         return dict(result) if result else None
 
 def agregar_categoria(nombre: str, usuario: str = None) -> str:
-    """Agrega una nueva categoría"""
-    nombre = nombre.strip()
-    if not nombre:
-        raise ValueError("El nombre de la categoría no puede estar vacío.")
+    """Agregar una nueva categoría."""
+    nombre = _normalize_nombre(nombre)
 
     # Verificar duplicado
     categorias = [c["nombre"].lower() for c in list_categories()]
@@ -40,10 +44,8 @@ def agregar_categoria(nombre: str, usuario: str = None) -> str:
     return nombre
 
 def editar_categoria(cat_id: int, nombre_nuevo: str, usuario: str = None) -> str:
-    """Edita el nombre de una categoría existente por ID"""
-    nombre_nuevo = nombre_nuevo.strip()
-    if not nombre_nuevo:
-        raise ValueError("El nombre de la categoría no puede estar vacío.")
+    """Editar el nombre de una categoría existente."""
+    nombre_nuevo = _normalize_nombre(nombre_nuevo)
 
     categoria = get_category(cat_id)
     if not categoria:
@@ -64,6 +66,7 @@ def editar_categoria(cat_id: int, nombre_nuevo: str, usuario: str = None) -> str
     return nombre_nuevo
 
 def eliminar_categoria(cat_id: int, usuario: str = None):
+    """Eliminar una categoría por ID."""
     with get_connection() as conn:
         row = conn.execute(
             "SELECT id, nombre FROM categorias WHERE id = ?",
@@ -78,7 +81,7 @@ def eliminar_categoria(cat_id: int, usuario: str = None):
         raise ValueError("Categoría no encontrada")
 
 def list_products_by_category(categoria_id: int) -> list[dict]:
-    """Devuelve todos los productos de una categoría específica"""
+    """Listar productos de una categoría específica."""
     query = "SELECT * FROM productos WHERE categoria_id = ? ORDER BY nombre"
     with get_connection() as conn:
         result = conn.execute(query, (categoria_id,))

@@ -5,10 +5,35 @@ __pycache__/
 *.pyd
 *.sqlite3
 
-# Entorno
+# Entorno / secretos
 .env
-venv/
 .env.*
+.env.local
+.env.*.local
+venv/
+.venv/
+*.env
+!.env.example
+!/.env.example
+*.key
+*.pem
+*.p12
+*.pfx
+*.crt
+*.der
+*.jks
+*.keystore
+credentials.json
+**/credentials.json
+**/secrets.json
+**/secrets.yaml
+**/secrets.yml
+**/config.local.*
+**/*.local.*
+**/.env
+**/.env.*
+**/.secrets
+**/.secrets.*
 
 # Datos locales
 data/

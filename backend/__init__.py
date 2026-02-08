@@ -1,10 +1,60 @@
-# Permite importar módulos desde backend
+"""Public backend API re-exports for the Streamlit UI."""
+
+from .categorias import (
+    agregar_categoria,
+    editar_categoria,
+    eliminar_categoria,
+    get_category,
+    list_categories,
+    list_products_by_category,
+)
+from .clientes import (
+    add_client,
+    delete_client,
+    edit_client,
+    get_client,
+    list_clients,
+    update_client,
+)
 from .db import get_connection
-from .usuarios import crear_usuario, autenticar_usuario, cambiar_password, requiere_cambio_password, activar_usuario, desactivar_usuario,  obtener_logs_usuario, eliminar_usuario
-from .productos import list_products, get_product, guardar_producto , adjust_stock, update_product, eliminar_producto, editar_producto
-from .clientes import list_clients, add_client, update_client, delete_client, get_client, edit_client
-from .ventas import list_sales, get_sale, delete_sale, register_sale, generar_factura_pdf, listar_ventas_dict, editar_venta_extra
-from .deudas import list_debts, get_debt, add_debt, update_debt, debts_by_client, delete_debt, pay_debt_producto, list_detalle_deudas, list_clientes_con_deuda
-from .categorias import list_categories, get_category, agregar_categoria, editar_categoria, eliminar_categoria,list_products_by_category
+from .deudas import (
+    add_debt,
+    debts_by_client,
+    delete_debt,
+    get_debt,
+    list_clientes_con_deuda,
+    list_debts,
+    list_detalle_deudas,
+    pay_debt_producto,
+    update_debt,
+)
 from .logs import registrar_log
-from .notas import list_notes, add_note, update_note, delete_note
+from .notas import add_note, delete_note, list_notes, update_note
+from .productos import (
+    adjust_stock,
+    editar_producto,
+    eliminar_producto,
+    get_product,
+    guardar_producto,
+    list_products,
+    update_product,
+)
+from .usuarios import (
+    activar_usuario,
+    autenticar_usuario,
+    cambiar_password,
+    crear_usuario,
+    desactivar_usuario,
+    eliminar_usuario,
+    obtener_logs_usuario,
+    requiere_cambio_password,
+)
+from .ventas import (
+    delete_sale,
+    editar_venta_extra,
+    generar_factura_pdf,
+    get_sale,
+    list_sales,
+    listar_ventas_dict,
+    register_sale,
+)

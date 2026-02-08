@@ -1,94 +1,88 @@
-# 📊 Sistema de Contabilidad del Almacén
+# ElectroGalindez Desktop (Electron + Python)
 
-Este proyecto permite:
-- Ver inventario
-- Registrar ventas
-- Registrar pagos de clientes
-- Generar reportes con gráficas
+## 📌 Descripción del proyecto
+ElectroGalindez es una aplicación de contabilidad construida en Python (Streamlit) y empaquetada como ejecutable standalone. Este repositorio incluye un wrapper en Electron que lanza el ejecutable, espera el servidor local y muestra la interfaz en una ventana de escritorio para Windows y macOS.
 
-## 🚀 Cómo ejecutarlo localmente
-1. Clona el repositorio:
+## ✅ Requisitos
+- **Python 3.11** (para generar el ejecutable con PyInstaller)
+- **Node.js 18+** y **npm** (para Electron)
+- **PyInstaller** (para empaquetar la app Python)
+- **Git** (opcional)
+
+## 🔐 Variables de entorno (desarrollo y producción)
+Este proyecto usa variables de entorno para credenciales (por ejemplo, Twilio). Para desarrollo:
+1. Copia `.env.example` a `.env`.
+2. Completa los valores reales.
+
+En producción, define estas variables directamente en el entorno del sistema o en el servicio de despliegue.
+**No subas archivos `.env` ni credenciales al repositorio.**
+
+## ▶️ Ejecutar localmente
+1. Instala dependencias de Electron:
    ```bash
-   git clone https://github.com/TU_USUARIO/almacen_contabilidad.git
-   cd almacen_contabilidad
+   npm install
+   ```
+2. Inicia Electron:
+   ```bash
+   npm start
    ```
 
-2. Instala dependencias:
-   ```bash
-   pip install -r requirements.txt
-   ```
+> Asegúrate de que el ejecutable de Python exista en `./dist/` antes de iniciar Electron.
 
-3. Ejecuta la app (modo web local):
-   ```bash
-   streamlit run ElectroGalindez.py
-   ```
+## 📦 Empaquetar la app Python (standalone)
+Desde tu entorno virtual de **Python 3.11**, ejecuta:
 
-## 💾 Persistencia local (SQLite)
-La aplicación usa SQLite local (archivo `data/electrogalindez.sqlite`) mediante el módulo nativo `sqlite3`,
-lo que garantiza funcionamiento 100% offline sin necesidad de servicios externos.
-
-## 🖥️ Ejecutar como aplicación de escritorio (sin internet)
-Este proyecto ya incluye un lanzador de escritorio usando **pywebview**.
-
-1. Instala dependencias:
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-2. Inicia la app de escritorio:
-   ```bash
-   python desktop_app.py
-   ```
-
-Esto abre una ventana nativa que corre el Streamlit localmente, sin conexión.
-
-## 🧭 Aplicación de escritorio (PySide6)
-También puedes ejecutar una interfaz 100% nativa (sin navegador) basada en **PySide6**:
-
+### Windows
 ```bash
-python desktop_app_pyside6.py
+pyinstaller --onefile --noconsole --name ElectroGalindez \
+  --add-data "backend;backend" \
+  --add-data "ui;ui" \
+  --add-data "pages;pages" \
+  --add-data "assets;assets" \
+  run_app.py
 ```
 
-La base de datos SQLite se crea de forma automática en una ruta local del sistema:
-- Windows: `%LOCALAPPDATA%\\tu_app\\db.sqlite`
-- macOS: `~/Library/Application Support/tu_app/db.sqlite`
-- Linux/otros: `./data/db.sqlite`
-
-Con esa base local, los CRUDs de Usuarios, Ventas, Inventario y Notas funcionan 100% offline.
-
-## 📦 Empaquetar como ejecutable
-Puedes generar un ejecutable local con **PyInstaller**:
-
+### macOS
 ```bash
-pip install pyinstaller
-pyinstaller --onefile --noconsole desktop_app.py
+pyinstaller --onefile --windowed --name ElectroGalindez \
+  --add-data "backend:backend" \
+  --add-data "ui:ui" \
+  --add-data "pages:pages" \
+  --add-data "assets:assets" \
+  run_app.py
 ```
 
-## 📦 Empaquetado PySide6 (PyInstaller)
-Sigue estos pasos para empaquetar la app nativa de escritorio sin consola:
+Esto generará el ejecutable en `./dist/`.
 
-### ✅ Windows (.exe)
-1. Instala PyInstaller:
-   ```bash
-   pip install pyinstaller
-   ```
-2. Genera el ejecutable:
-   ```bash
-   pyinstaller --noconsole --windowed --name tu_app desktop_app_pyside6.py
-   ```
-3. El .exe final estará en `dist/tu_app/tu_app.exe`.
-4. Al ejecutarlo, SQLite se creará en:
-   `%LOCALAPPDATA%\\tu_app\\db.sqlite`.
+## 🧱 Empaquetar la app Electron (instaladores)
+Para generar instaladores multiplataforma:
+```bash
+npm run build
+```
+Esto usará `electron-builder` para crear:
+- **Windows**: instalador **NSIS**
+- **macOS**: imagen **DMG**
 
-### ✅ macOS (.app)
-1. Instala PyInstaller:
-   ```bash
-   pip install pyinstaller
-   ```
-2. Genera la app:
-   ```bash
-   pyinstaller --windowed --name tu_app desktop_app_pyside6.py
-   ```
-3. La app final estará en `dist/tu_app.app`.
-4. Al ejecutarla, SQLite se creará en:
-   `~/Library/Application Support/tu_app/db.sqlite`.
+## 📂 Usar la app portable
+Puedes copiar la carpeta generada en `dist/` a otra computadora del mismo sistema operativo y ejecutar:
+- **Windows**: `ElectroGalindez.exe`
+- **macOS**: `ElectroGalindez`
+
+No requiere instalación adicional si el ejecutable fue generado correctamente.
+
+## 🛠️ Solución de problemas comunes
+**1. El ejecutable no abre o se cierra inmediatamente**
+- Asegúrate de generar el ejecutable con Python 3.11 y todas las dependencias instaladas.
+- Verifica que `./dist/` contenga el archivo correcto.
+
+**2. Electron se abre en blanco**
+- El backend de Streamlit puede no haberse iniciado. Revisa la consola.
+- Verifica que `http://localhost:8501` responda.
+
+**3. Error al empaquetar con PyInstaller**
+- Asegúrate de que todos los módulos internos estén incluidos con `--add-data`.
+- Reinstala dependencias en un venv limpio.
+
+**4. Problemas de permisos en macOS**
+- Ejecuta: `chmod +x dist/ElectroGalindez`
+- Si Gatekeeper bloquea la app, permite su ejecución en Ajustes de Seguridad.
