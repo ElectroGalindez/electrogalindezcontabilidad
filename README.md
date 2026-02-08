@@ -76,6 +76,59 @@ Puedes copiar la carpeta generada en `dist/` a otra computadora del mismo sistem
 
 No requiere instalación adicional si el ejecutable fue generado correctamente.
 
+## 🗄️ Base de datos local (SQLite + CSV)
+La app ahora trabaja con una base de datos **SQLite local** (`local.db`) y puede importar datos desde CSVs exportados de Neon.
+
+### 📁 Estructura recomendada
+Coloca los CSVs en:
+```
+data/csv/
+  usuarios.csv
+  productos.csv
+  categorias.csv
+  clientes.csv
+  ventas.csv
+  deudas.csv
+  deudas_detalle.csv
+  logs.csv
+  auditoria.csv
+  notas.csv
+```
+
+### ⚙️ Bootstrap automático
+Cada vez que la app pide una conexión, se asegura de:
+1. Crear el esquema si no existe.
+2. Importar CSVs **solo si la base está vacía**.
+
+### ✅ Ejemplos de uso en la app
+```python
+from data.db import ensure_bootstrap, fetch_all, insert_row
+
+# 1) Inicializar y cargar CSVs si la base está vacía
+ensure_bootstrap()
+
+# 2) Leer datos para mostrarlos en Streamlit
+clientes = fetch_all(\"SELECT * FROM clientes ORDER BY nombre\")
+
+# 3) Insertar datos
+nuevo_id = insert_row(\n    \"clientes\",\n    {\"nombre\": \"Cliente Demo\", \"telefono\": \"555-123\", \"deuda_total\": 0},\n)\n```
+
+### 🔎 Consultas filtradas básicas
+```python
+from data.db import fetch_all
+
+ventas_pendientes = fetch_all(\n    \"SELECT * FROM ventas WHERE saldo > ? ORDER BY fecha DESC\",\n    [0],\n)\n```
+
+### 🧩 Script de importación manual
+Para cargar los CSVs manualmente:
+```bash
+python scripts/load_data.py --csv-dir data/csv
+```
+Si necesitas reimportar datos en una base ya poblada:
+```bash
+python scripts/load_data.py --csv-dir data/csv --force
+```
+
 ## 🛠️ Solución de problemas comunes
 **1. El ejecutable no abre o se cierra inmediatamente**
 - Asegúrate de generar el ejecutable con Python 3.11 y todas las dependencias instaladas.

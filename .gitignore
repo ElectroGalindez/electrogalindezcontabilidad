@@ -48,3 +48,6 @@ credentials.json
 data/
 *.db
 *.log
+!data/
+!data/__init__.py
+!data/db.py
