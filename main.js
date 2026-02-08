@@ -1,7 +1,8 @@
 const { app, BrowserWindow } = require("electron");
+const { spawn } = require("child_process");
+const fs = require("fs");
 const http = require("http");
 const path = require("path");
-const { spawn } = require("child_process");
 
 const STREAMLIT_URL = "http://localhost:8501";
 const MAX_WAIT_MS = 30_000;
@@ -23,6 +24,11 @@ function logError(message, error) {
 
 function resolveExecutablePath() {
   const executableName = process.platform === "win32" ? "ElectroGalindez.exe" : "ElectroGalindez";
+  const resourcePath = app.isPackaged ? process.resourcesPath : __dirname;
+  const distPath = path.join(resourcePath, "dist", executableName);
+  if (fs.existsSync(distPath)) {
+    return distPath;
+  }
   return path.join(__dirname, "dist", executableName);
 }
 
@@ -54,12 +60,16 @@ function waitForStreamlit() {
         res.resume();
         if (res.statusCode && res.statusCode >= 200 && res.statusCode < 500) {
           resolve();
-        } else {
-          retry();
+          return;
         }
+        retry();
       });
 
       req.on("error", retry);
+      req.setTimeout(2_000, () => {
+        req.destroy();
+        retry();
+      });
     };
 
     const retry = () => {
@@ -89,6 +99,11 @@ async function createWindow() {
 
     await mainWindow.loadURL(STREAMLIT_URL);
     logInfo("Ventana Electron abierta.");
+
+    mainWindow.on("closed", () => {
+      mainWindow = null;
+      cleanupAndExit();
+    });
   } catch (error) {
     logError("No se pudo iniciar la app.", error);
     app.quit();
@@ -98,15 +113,23 @@ async function createWindow() {
 function cleanupAndExit() {
   if (pythonProcess && !pythonProcess.killed) {
     logInfo("Cerrando ejecutable Python...");
-    pythonProcess.kill();
+    pythonProcess.kill(process.platform === "win32" ? "SIGTERM" : "SIGTERM");
   }
 }
 
-app.on("ready", createWindow);
+app.whenReady().then(createWindow);
+
+app.on("activate", () => {
+  if (BrowserWindow.getAllWindows().length === 0) {
+    createWindow();
+  }
+});
 
 app.on("before-quit", cleanupAndExit);
 
 app.on("window-all-closed", () => {
   cleanupAndExit();
-  app.quit();
+  if (process.platform !== "darwin") {
+    app.quit();
+  }
 });
