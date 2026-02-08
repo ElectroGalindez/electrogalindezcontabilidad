@@ -12,7 +12,13 @@ ElectroGalindez es una aplicación de contabilidad construida en Python (Streaml
 ## 🔐 Variables de entorno (desarrollo y producción)
 Este proyecto usa variables de entorno para credenciales (por ejemplo, Twilio). Para desarrollo:
 1. Copia `.env.example` a `.env`.
-2. Completa los valores reales.
+2. Completa los valores reales en `.env`.
+
+Variables esperadas (ver `.env.example`):
+- `TWILIO_ACCOUNT_SID`: SID de la cuenta de Twilio.
+- `TWILIO_AUTH_TOKEN`: token de autenticación de Twilio.
+- `TWILIO_WHATSAPP_FROM`: número de WhatsApp de salida en formato `whatsapp:+1234567890`.
+- `TWILIO_WHATSAPP_TO`: número de WhatsApp de destino en formato `whatsapp:+1098765432`.
 
 En producción, define estas variables directamente en el entorno del sistema o en el servicio de despliegue.
 **No subas archivos `.env` ni credenciales al repositorio.**

@@ -10,6 +10,7 @@ __pycache__/
 .env.*
 .env.local
 .env.*.local
+.envrc
 venv/
 .venv/
 *.env
@@ -23,17 +24,25 @@ venv/
 *.der
 *.jks
 *.keystore
+*.secret
+*.secrets
+*.credentials
 credentials.json
 **/credentials.json
 **/secrets.json
 **/secrets.yaml
 **/secrets.yml
 **/config.local.*
+**/config.*.local
 **/*.local.*
 **/.env
 **/.env.*
 **/.secrets
 **/.secrets.*
+**/.aws/credentials
+**/.aws/config
+.npmrc
+.pypirc
 
 # Datos locales
 data/
