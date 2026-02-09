@@ -29,4 +29,12 @@ python-dateutil>=2.8
 pywebview>=4.4
 
 # Reporting
-reportlab
+reportlab>=3.6
+
+# Logging
+loguru>=0.6
+
+# Testing
+pytest>=7.0
+pytest-cov>=3.0 
+

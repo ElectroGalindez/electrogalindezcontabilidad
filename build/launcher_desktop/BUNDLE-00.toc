@@ -1,0 +1,3 @@
+([('launcher_desktop',
+   '/Users/vicent/Story/electrogalindezcontabilidad/dist/launcher_desktop',
+   'EXECUTABLE')],)
