@@ -1,0 +1,160 @@
+"""Customer management helpers."""
+
+from typing import Any, Dict, Optional
+
+from .db import get_connection
+from .logs import registrar_log
+
+
+def _normalize_text(value: Optional[str]) -> Optional[str]:
+    """Normalizar valores de texto opcionales."""
+    return value.strip() if value else None
+
+
+def get_client(cliente_id: str) -> Optional[Dict[str, Any]]:
+    """Obtener un cliente por ID."""
+    with get_connection() as conn:
+        result = conn.execute(
+            "SELECT id, nombre, telefono, ci, chapa, direccion, deuda_total FROM clientes WHERE id = ?",
+            (cliente_id,),
+        )
+        row = result.fetchone()
+        return dict(row) if row else None
+
+
+def add_client(nombre, telefono, ci, direccion, chapa, usuario=None):
+    """Agregar un nuevo cliente y registrar auditoría si aplica."""
+    try:
+        with get_connection() as conn:
+            conn.execute(
+                """
+                    INSERT INTO clientes (nombre, telefono, ci, direccion, chapa)
+                    VALUES (:nombre, :telefono, :ci, :direccion, :chapa)
+                """,
+                {
+                    "nombre": nombre.strip(),
+                    "telefono": _normalize_text(telefono),
+                    "ci": _normalize_text(ci),
+                    "direccion": _normalize_text(direccion),
+                    "chapa": _normalize_text(chapa),
+                },
+            )
+
+        if usuario and isinstance(usuario, (str, int)):
+            registrar_log(
+                usuario=str(usuario),
+                accion="crear_cliente",
+                detalles={
+                    "nombre": nombre,
+                    "telefono": telefono,
+                    "ci": ci,
+                    "direccion": direccion,
+                    "chapa": chapa,
+                },
+            )
+
+        with get_connection() as conn:
+            nuevo = conn.execute("SELECT * FROM clientes ORDER BY id DESC LIMIT 1").fetchone()
+            return dict(nuevo) if nuevo else None
+
+    except Exception as exc:
+        raise ValueError("Error al registrar el cliente. Verifica los datos e inténtalo nuevamente.") from exc
+
+
+def update_client(cliente_id: str, nombre=None, telefono=None, ci=None, chapa=None, direccion=None, usuario=None):
+    """Actualizar los datos de un cliente existente."""
+    with get_connection() as conn:
+        cliente = get_client(cliente_id)
+        if not cliente:
+            raise ValueError(f"No existe el cliente con ID {cliente_id}")
+
+        nombre = nombre or cliente.get("nombre")
+        telefono = telefono or cliente.get("telefono", "")
+        ci = ci or cliente.get("ci", "")
+        chapa = chapa or cliente.get("chapa", "")
+        direccion = direccion or cliente.get("direccion", "")
+
+        query = """
+            UPDATE clientes
+            SET nombre = :nombre,
+                telefono = :telefono,
+                ci = :ci,
+                chapa = :chapa,
+                direccion = :direccion
+            WHERE id = :id
+        """
+        conn.execute(
+            query,
+            {
+                "id": cliente_id,
+                "nombre": nombre,
+                "telefono": telefono,
+                "ci": ci,
+                "chapa": chapa,
+                "direccion": direccion,
+            },
+        )
+
+    registrar_log(usuario or "sistema", "update_client", {"id": cliente_id})
+    return get_client(cliente_id)
+
+
+def delete_client(cliente_id: str, usuario: str = "sistema") -> bool:
+    """Eliminar un cliente."""
+    try:
+        with get_connection() as conn:
+            conn.execute("DELETE FROM clientes WHERE id = ?", (cliente_id,))
+        registrar_log(usuario, "delete_client", {"id": cliente_id})
+        return True
+    except Exception as exc:
+        registrar_log(usuario, "error_delete_client", {"id": cliente_id, "error": str(exc)})
+        raise
+
+
+def update_debt(cliente_id: str, monto: float, usuario: str = "sistema") -> Dict[str, Any]:
+    """Actualizar la deuda del cliente de manera segura."""
+    try:
+        with get_connection() as conn:
+            conn.execute(
+                """
+                UPDATE clientes
+                SET deuda_total = MAX(deuda_total + :monto, 0)
+                WHERE id = :id
+                """,
+                {"id": cliente_id, "monto": monto},
+            )
+        registrar_log(usuario, "update_debt", {"id": cliente_id, "monto": monto})
+        return get_client(cliente_id)
+    except Exception as exc:
+        registrar_log(usuario, "error_update_debt", {"id": cliente_id, "monto": monto, "error": str(exc)})
+        raise
+
+
+def list_clients() -> list[Dict[str, Any]]:
+    """Listar todos los clientes con campos esenciales."""
+    with get_connection() as conn:
+        result = conn.execute(
+            "SELECT id, nombre, telefono, ci, chapa, direccion, deuda_total FROM clientes ORDER BY nombre"
+        )
+        return [dict(r) for r in result.fetchall()]
+
+
+def edit_client(
+    cliente_id: str,
+    nombre: Optional[str] = None,
+    telefono: Optional[str] = None,
+    ci: Optional[str] = None,
+    chapa: Optional[str] = None,
+    direccion: Optional[str] = None,
+    usuario: str = "sistema",
+) -> Dict[str, Any]:
+    """Editar un cliente existente."""
+    return update_client(
+        cliente_id,
+        nombre=nombre,
+        telefono=telefono,
+        ci=ci,
+        chapa=chapa,
+        direccion=direccion,
+        usuario=usuario,
+    )
