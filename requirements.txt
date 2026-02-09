@@ -1,43 +1,24 @@
-# Core
-streamlit>=1.20
-pandas>=1.5
+# Streamlit para la interfaz principal
+streamlit==1.32.2
 
-# Plotting
-plotly>=5.0
-matplotlib>=3.5
+# PyWebview para ventana de escritorio
+pywebview==3.7
 
-# Excel
-xlsxwriter>=3.1
-openpyxl>=3.0
+# Plotly para gráficos interactivos
+plotly==5.16.1
 
-# Security / Auth
-bcrypt>=4.0
+# Bcrypt para hash de contraseñas
+bcrypt==4.0.1
 
-# File handling / concurrency
-filelock>=3.12
+# ReportLab para generación de PDFs
+reportlab==4.0.0
 
-# Twilio (SMS)
-twilio>=8.0
+# Watchdog para recarga rápida de Streamlit
+watchdog==3.0.0
 
-# PDF generation
-fpdf2==2.7.9
+# Flask para la mini app de backend / APIs
+Flask==2.3.4
 
-# Date handling
-python-dateutil>=2.8
-
-# Desktop app wrapper
-pywebview>=4.4
-
-# Web API
-flask>=2.3
-
-# Reporting
-reportlab>=3.6
-
-# Logging
-loguru>=0.6
-
-# Testing
-pytest>=7.0
-pytest-cov>=3.0 
-
+# Otras utilidades (opcional, si las usas en el backend)
+pandas==2.1.0
+numpy==1.26.0
