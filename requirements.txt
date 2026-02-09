@@ -28,5 +28,8 @@ python-dateutil>=2.8
 # Desktop app wrapper
 pywebview>=4.4
 
+# Web API
+flask>=2.3
+
 # Reporting
 reportlab
