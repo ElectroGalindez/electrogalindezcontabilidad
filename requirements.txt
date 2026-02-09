@@ -32,4 +32,12 @@ pywebview>=4.4
 flask>=2.3
 
 # Reporting
-reportlab
+reportlab>=3.6
+
+# Logging
+loguru>=0.6
+
+# Testing
+pytest>=7.0
+pytest-cov>=3.0 
+

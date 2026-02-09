@@ -1,0 +1,6 @@
+"id","username","password","nombre","activo","intentos_fallidos","bloqueado_hasta","rol","cambiar_password","requiere_cambio_password","created_at"
+"6","Omar","$2b$12$bQHSloowdtTs5CrftYzwm.qHKwivTyuZefm4ogG2fHthtGWoa4Kd.",,"true","0",,"admin","false","true","2025-10-06 13:42:32.821627"
+"7","Adrian","$2b$12$77.TiFZ8xfufMwDNx6W85ugMIid652KA52Khc/.nCQZa/Q3kMgB86",,"true","0",,"empleado","false","true","2025-10-06 13:42:32.821627"
+"18","admin","$2b$12$hwtgQq/5jdS5dGC.vYoTR.j5WENPBR3KRJi3iAJr8BIwPtq87gHRm",,"true","0",,"admin","false","true","2025-10-18 02:50:45.471329"
+"19","Anthuan","$2b$12$PJ1kTxBmr9pWJO9.pHB.FekjAG.Dd..XgaPv/hH6CFt9pYXea10rC",,"true","0",,"empleado","false","true","2025-10-18 03:13:03.990372"
+"20","Javier","$2b$12$ikt9G9HZ85c5llBCuPfDvulTyTLVlhMNZMmbKIZAONcrGS2rLIH1S",,"true","0",,"empleado","false","true","2026-02-06 16:51:53.622591"
