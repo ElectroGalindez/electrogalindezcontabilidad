@@ -2,6 +2,7 @@
 import streamlit as st
 import pandas as pd
 from backend import categorias, productos
+import ui.error_handler as handle_app_error
 
 
 
