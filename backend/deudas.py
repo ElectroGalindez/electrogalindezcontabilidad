@@ -101,31 +101,26 @@ def add_debt(
 # ======================================================
 # 💵 Registrar pago de deuda por producto
 # ======================================================
-def pay_debt_producto(deuda_id: int, producto_id: int, monto_pago: float, usuario: Optional[str] = None) -> Dict[str, Any]:
-    """
-    Aplica un pago solo sobre un detalle de deuda (producto) específico.
-    Actualiza la cantidad pendiente proporcionalmente al pago.
-    """
+from sqlalchemy import text
+from backend.db import engine
+# backend/deudas.py
+from backend.ventas import get_sale
+from backend import ventas
+
+
+
+def pay_debt_producto(deuda_id: int, producto_id: int, monto_pago: float, usuario=None):
     deuda = get_debt(deuda_id)
     if not deuda:
         raise KeyError(f"Deuda {deuda_id} no encontrada")
-
+    
     detalle = next((d for d in deuda.get("detalles", []) if d["producto_id"] == producto_id), None)
     if not detalle:
         raise KeyError(f"Producto {producto_id} no encontrado en la deuda {deuda_id}")
 
-    cantidad_pendiente = float(detalle["cantidad"])
     precio_unitario = float(detalle["precio_unitario"])
-    monto_total_pendiente = cantidad_pendiente * precio_unitario
-
-    if monto_pago <= 0 or monto_pago > monto_total_pendiente:
-        raise ValueError(f"Monto de pago inválido. Debe ser entre 0 y {monto_total_pendiente}")
-
-    # -----------------------------
-    # Calcular cantidad pagada y nueva cantidad pendiente
-    # -----------------------------
     cantidad_pagada = monto_pago / precio_unitario
-    nueva_cantidad = round(max(cantidad_pendiente - cantidad_pagada, 0), 4)
+    nueva_cantidad = max(float(detalle["cantidad"]) - cantidad_pagada, 0)
 
     nuevo_estado_det = "pagado" if nueva_cantidad == 0 else "pendiente"
 
@@ -133,39 +128,43 @@ def pay_debt_producto(deuda_id: int, producto_id: int, monto_pago: float, usuari
         # Actualizar detalle de deuda
         conn.execute(text("""
             UPDATE deudas_detalle
-            SET cantidad = :nueva_cantidad, estado = :nuevo_estado
-            WHERE id = :id
-        """), {"nueva_cantidad": nueva_cantidad, "nuevo_estado": nuevo_estado_det, "id": detalle["id"]})
+            SET cantidad=:cantidad, estado=:estado
+            WHERE id=:id
+        """), {"cantidad": nueva_cantidad, "estado": nuevo_estado_det, "id": detalle["id"]})
 
         # Actualizar deuda principal
-        nuevo_monto_total = round(float(deuda["monto_total"]) - monto_pago, 2)
-        nuevo_estado = "pagada" if nuevo_monto_total == 0 else "pendiente"
-        result = conn.execute(text("""
+        total_restante = conn.execute(text("""
+            SELECT SUM(cantidad * precio_unitario) 
+            FROM deudas_detalle
+            WHERE deuda_id=:deuda_id AND estado='pendiente'
+        """), {"deuda_id": deuda_id}).scalar() or 0
+
+        estado_deuda = "pagada" if total_restante <= 0 else "pendiente"
+        conn.execute(text("""
             UPDATE deudas
-            SET monto_total=:nuevo_monto_total, estado=:nuevo_estado
-            WHERE id=:id
-            RETURNING *
-        """), {"nuevo_monto_total": nuevo_monto_total, "nuevo_estado": nuevo_estado, "id": deuda_id}).mappings().first()
+            SET estado=:estado
+            WHERE id=:deuda_id
+        """), {"estado": estado_deuda, "deuda_id": deuda_id})
 
-    # Actualizar deuda total del cliente
-    update_debt(deuda["cliente_id"], -monto_pago)
+        # Actualizar venta asociada si la deuda queda pagada
+        if total_restante <= 0:
+            deuda["estado"] = "pagada"
 
-    # Registrar log
-    try:
-        from .logs import registrar_log
-        registrar_log(usuario or "sistema", "pago_deuda_producto", {
-            "deuda_id": deuda_id,
-            "cliente_id": deuda["cliente_id"],
-            "producto_id": producto_id,
-            "monto_pago": monto_pago,
-            "cantidad_pagada": cantidad_pagada,
-            "cantidad_restante": nueva_cantidad,
-            "estado_final": nuevo_estado_det
-        })
-    except Exception:
-        pass
+            # Actualizar la venta asociada a pagada
+            venta_id = deuda.get("venta_id")
+            if venta_id:
+                venta = get_sale(venta_id)
+                if venta:
+                    venta["pagado"] = venta["total"]  # marcar como pagada
+                    # guardar en BD
+                    ventas.editar_venta_extra(
+                        sale_id=venta_id,
+                        observaciones=venta.get("observaciones"),
+                        usuario=usuario
+                    )
 
-    return dict(result)
+
+    return {"detalle": detalle, "estado_deuda": estado_deuda}
 
 # ======================================================
 # 📋 Listar deudas por cliente
@@ -256,77 +255,33 @@ def list_clientes_con_deuda():
     with engine.connect() as conn:
         result = conn.execute(query)
         return [dict(row._mapping) for row in result]
-
-from reportlab.lib.pagesizes import letter
-from reportlab.lib import colors
-from reportlab.platypus import Table, TableStyle
-from reportlab.pdfgen import canvas
-from reportlab.lib.utils import ImageReader
-from io import BytesIO
-import os
-
-def generar_factura_pago_deuda(cliente: dict, detalle_deuda: dict, monto_pagado: float, logo_path="assets/logo.png"):
-    """
-    Genera un PDF de comprobante de pago de deuda.
     
-    cliente: dict con info del cliente
-    detalle_deuda: dict con info de deuda/detalle producto pagado
-    monto_pagado: float con el monto pagado
-    logo_path: ruta al logo de la empresa
+from io import BytesIO
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import letter
+
+def generar_factura_pago_deuda( cliente, productos_pagados):
+    """
+    Genera un PDF de la factura de pago de deuda.
     """
     buffer = BytesIO()
     c = canvas.Canvas(buffer, pagesize=letter)
     width, height = letter
-    line_height = 15
 
-    # Cargar logo
-    logo = None
-    if os.path.exists(logo_path):
-        try:
-            logo = ImageReader(logo_path)
-        except Exception as e:
-            print(f"No se pudo cargar el logo: {e}")
+    # Encabezado
+    c.setFont("Helvetica-Bold", 14)
+    c.drawString(50, height-50, f"Factura de Pago de Deuda - Cliente: {cliente.get('nombre','N/A')}")
 
-    def dibujar_factura(y_offset=0):
-        nonlocal c
-        # ---------------- Logo ----------------
-        if logo:
-            c.drawImage(logo, 40, height - 85 - y_offset, width=80, height=70, preserveAspectRatio=True)
-        # ------------- Empresa ----------------
-        c.setFont("Helvetica-Bold", 14)
-        c.drawString(130, height - 50 - y_offset, "Omar Galíndez Ramirez. CI: 85082506984")
-        c.setFont("Helvetica", 10)
-        c.drawString(130, height - 65 - y_offset, f"Comprobante de pago de deuda")
-        c.drawString(130, height - 80 - y_offset, f"Fecha: {detalle_deuda.get('fecha','')}")
+    # Productos pagados
+    y = height-100
+    c.setFont("Helvetica", 12)
+    for p in productos_pagados:
+        c.drawString(50, y, f"{p['nombre']} - Cantidad: {p['cantidad']} - Precio: ${p['precio_unitario']:.2f}")
+        y -= 20
 
-        # ------------- Cliente ----------------
-        col1_x = 40
-        row_y = height - 110 - y_offset
-        c.drawString(col1_x, row_y, f"Cliente: {cliente.get('nombre','')}"); row_y -= line_height
-        c.drawString(col1_x, row_y, f"CI: {cliente.get('ci','')}"); row_y -= line_height
-        c.drawString(col1_x, row_y, f"Teléfono: {cliente.get('telefono','')}"); row_y -= line_height
-
-        # ------------- Pago ----------------
-        col2_x = 320
-        row_y2 = height - 110 - y_offset
-        c.drawString(col2_x, row_y2, f"Producto: {detalle_deuda.get('producto','')}"); row_y2 -= line_height
-        c.drawString(col2_x, row_y2, f"Cantidad pagada: {detalle_deuda.get('cantidad_pagada',detalle_deuda.get('cantidad',0))}"); row_y2 -= line_height
-        c.drawString(col2_x, row_y2, f"Monto pagado: ${monto_pagado:,.2f}"); row_y2 -= line_height
-        c.drawString(col2_x, row_y2, f"Saldo restante: ${detalle_deuda.get('monto_restante',0):,.2f}"); row_y2 -= line_height
-
-        # ------------- Firma ----------------
-        firma_y = row_y2 - 40
-        c.drawString(40, firma_y, "__________________________")
-        c.drawString(40, firma_y - 10, "Firma Cliente")
-        c.drawString(320, firma_y, "__________________________")
-        c.drawString(320, firma_y - 10, "Firma Empresa")
-
-    # Dibujar dos facturas en la misma hoja
-    dibujar_factura(y_offset=0)
-    c.setStrokeColor(colors.gray)
-    c.setLineWidth(1)
-    c.line(40, height/2, width-40, height/2)
-    dibujar_factura(y_offset=height/2)
+    # Total
+    total = sum(p['cantidad']*p['precio_unitario'] for p in productos_pagados)
+    c.drawString(50, y-20, f"Total pagado: ${total:.2f}")
 
     c.showPage()
     c.save()

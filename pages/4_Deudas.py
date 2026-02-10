@@ -76,10 +76,6 @@ try:
     cliente_id = clientes_opciones.get(cliente_sel)
 
 
-
-    # ==========================================================
-    # TABLA DE DEUDAS DEL CLIENTE
-    # ==========================================================
     # ==========================================================
     # 📋 BLOQUE DE DEUDAS PENDIENTES DEL CLIENTE
     # ==========================================================
@@ -188,15 +184,15 @@ try:
                         # -----------------------------
                         # Generar PDF doble
                         # -----------------------------
-                        from backend.ventas import generar_factura_pago_deuda
+                        from backend.deudas import generar_factura_pago_deuda
 
-                        detalle_factura = {
-                            "producto": detalle["Producto"],
-                            "cantidad_pagada": round(monto_pago / detalle.get("Precio Unitario", 1), 2),
-                            "fecha": detalle["Fecha"]
-                        }
+                        detalle_factura = [{
+                            "nombre": detalle["Producto"],
+                            "cantidad": round(monto_pago / detalle.get("Precio Unitario", 1), 2),
+                            "precio_unitario": detalle.get("Precio Unitario", 1)
+                        }]
 
-                        pdf_bytes = generar_factura_pago_deuda(cliente_obj, detalle_factura, monto_pagado=monto_pago)
+                        pdf_bytes = generar_factura_pago_deuda(cliente_obj, detalle_factura)
 
                         st.download_button(
                             label="⬇️ Descargar Comprobante de Pago",

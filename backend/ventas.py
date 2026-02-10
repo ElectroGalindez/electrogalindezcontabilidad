@@ -17,6 +17,8 @@ from reportlab.lib.utils import ImageReader
 # ----------------------------
 # Registrar venta
 # ----------------------------
+from .productos import adjust_stock  # o decrement_stock según tu implementación
+
 def register_sale(
     cliente_id: Optional[str],
     productos_vendidos: list,
@@ -32,6 +34,7 @@ def register_sale(
     usuario: Optional[str] = None
 ) -> dict:
     with engine.begin() as conn:
+        # 1️⃣ Insertar la venta
         insert_query = text("""
             INSERT INTO ventas (
                 cliente_id, productos_vendidos, total, pagado, saldo,
@@ -44,7 +47,7 @@ def register_sale(
         """)
         result = conn.execute(insert_query, {
             "cliente_id": cliente_id,
-            "productos_vendidos": json.dumps(productos_vendidos),  # ✅ pasar JSON como string
+            "productos_vendidos": json.dumps(productos_vendidos),
             "total": total,
             "pagado": pagado,
             "saldo": saldo,
@@ -56,12 +59,21 @@ def register_sale(
             "chapa": chapa
         }).mappings().first()
 
-        if result:
-            venta = dict(result)
-            registrar_log(usuario or "sistema", "registrar_venta", venta)
-            return venta
-        else:
+        if not result:
             raise Exception("Error al registrar la venta")
+
+        venta = dict(result)
+
+        # 2️⃣ ⚡ Descontar stock de los productos vendidos
+        for item in productos_vendidos:
+            producto_id = item.get("id_producto")
+            cantidad = item.get("cantidad", 0)
+            if producto_id and cantidad > 0:
+                adjust_stock(producto_id, -cantidad)  # descontar del inventario
+
+        # 3️⃣ Registrar log
+        registrar_log(usuario or "sistema", "registrar_venta", venta)
+        return venta
 
 # ----------------------------
 # Obtener venta por ID

@@ -2,25 +2,29 @@
 from datetime import datetime
 from typing import List, Dict, Any
 from sqlalchemy import text
+import json
 from .db import engine  # Función que devuelve conexión SQLAlchemy
 
 # ---------------------------
 # Registrar un log
 # ---------------------------
 
-def registrar_log(usuario, accion, detalles=None):
-    with engine.begin() as conn:  # usa begin() para transacción automática
+def registrar_log(usuario: str, accion: str, detalles: dict):
+    """
+    Registra una acción en la tabla de logs.
+    Convierte los dict a JSON para que PostgreSQL pueda almacenarlo.
+    """
+    if isinstance(detalles, dict):
+        detalles = json.dumps(detalles, default=str)  # default=str para datetime, Decimal, etc.
+
+    if isinstance(usuario, dict):
+        usuario = usuario.get("username", "sistema")  # o json.dumps(usuario) si quieres guardar todo
+
+    fecha = datetime.now()
+    with engine.begin() as conn:
         conn.execute(
-            text(
-                "INSERT INTO logs (usuario, accion, detalles, fecha) "
-                "VALUES (:usuario, :accion, :detalles, :fecha)"
-            ),
-            {
-                "usuario": usuario,
-                "accion": accion,
-                "detalles": str(detalles or {}),
-                "fecha": datetime.now()
-            }
+            text("INSERT INTO logs (usuario, accion, detalles, fecha) VALUES (:usuario, :accion, :detalles, :fecha)"),
+            {"usuario": usuario, "accion": accion, "detalles": detalles, "fecha": fecha}
         )
 
 # ---------------------------
