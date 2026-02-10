@@ -274,3 +274,94 @@ if generar_y_descargar:
         mime="application/pdf"
     )
     st.success("Factura generada y lista para descargar ✔")
+
+import streamlit as st
+import pandas as pd
+from backend import ventas, clientes
+
+st.set_page_config(page_title="Gestionar Ventas", layout="wide")
+st.title("🛠️ Gestionar Ventas Registradas")
+
+# Usuario actual
+usuario_actual = st.session_state.usuario["username"] if "usuario" in st.session_state else "sistema"
+
+# --------------------------
+# Cargar ventas
+# --------------------------
+ventas_list = ventas.list_sales()
+
+# Inicializar contador para detectar cambios
+if "ventas_count" not in st.session_state:
+    st.session_state.ventas_count = len(ventas_list)
+
+# Actualizar diccionario si cambió la cantidad de ventas
+if len(ventas_list) != st.session_state.ventas_count:
+    st.session_state.ventas_dict = None
+    st.session_state.ventas_count = len(ventas_list)
+
+# Crear diccionario de ventas si no existe
+if "ventas_dict" not in st.session_state or st.session_state.ventas_dict is None:
+    st.session_state.ventas_dict = {
+        f"ID {v['id']} - Cliente {v.get('cliente_id','N/A')} - Total ${v.get('total',0):.2f}": v
+        for v in ventas_list
+    }
+
+# --------------------------
+# Selector de venta
+# --------------------------
+venta_keys = [""] + list(st.session_state.ventas_dict.keys())
+venta_sel = st.selectbox("Selecciona una venta", venta_keys)
+
+if venta_sel:
+    venta_obj = st.session_state.ventas_dict[venta_sel]
+    cliente_obj = clientes.get_client(venta_obj.get("cliente_id"))
+    
+    if cliente_obj:
+        st.subheader(f"Detalles de la Venta ID {venta_obj['id']}")
+        col1, col2 = st.columns(2)
+        
+        # Info general
+        with col1:
+            st.markdown(f"**Cliente:** {cliente_obj.get('nombre','N/A')}")
+            st.markdown(f"**CI:** {cliente_obj.get('ci','')}")
+            st.markdown(f"**Dirección:** {cliente_obj.get('direccion','')}")
+            st.markdown(f"**Teléfono:** {cliente_obj.get('telefono','')}")
+            st.markdown(f"**Chapa:** {cliente_obj.get('chapa','')}")
+        with col2:
+            st.markdown(f"**Fecha:** {venta_obj.get('fecha')}")
+            st.markdown(f"**Total:** ${venta_obj.get('total',0):.2f}")
+            st.markdown(f"**Pagado:** ${venta_obj.get('pagado',0):.2f}")
+            st.markdown(f"**Saldo pendiente:** ${float(venta_obj.get('total',0)) - float(venta_obj.get('pagado',0)):.2f}")
+            st.markdown(f"**Tipo de pago:** {venta_obj.get('tipo_pago','')}")
+            st.markdown(f"**Usuario:** {venta_obj.get('usuario','')}")
+        
+        # Productos vendidos
+        st.markdown("**Productos vendidos:**")
+        df_productos = pd.DataFrame(venta_obj.get("productos_vendidos", []))
+        if not df_productos.empty:
+            df_productos["Subtotal"] = df_productos["cantidad"] * df_productos["precio_unitario"]
+            df_display = df_productos.copy()
+            df_display["precio_unitario"] = df_display["precio_unitario"].map("${:,.2f}".format)
+            df_display["Subtotal"] = df_display["Subtotal"].map("${:,.2f}".format)
+            st.dataframe(df_display[["nombre","cantidad","precio_unitario","Subtotal"]], use_container_width=True)
+        else:
+            st.info("No hay productos registrados en esta venta.")
+
+        # --------------------------
+        # Botón de eliminar venta
+        # --------------------------
+        st.subheader("⚠️ Eliminar venta (solo si fue un error)")
+        confirmar = st.checkbox(f"Confirmar eliminación de venta ID {venta_obj['id']}", key=f"confirm_{venta_obj['id']}")
+        if confirmar and st.button("🗑️ Eliminar venta", key=f"delete_{venta_obj['id']}"):
+            try:
+                ventas.delete_sale(venta_obj["id"], usuario=usuario_actual)
+                st.success(f"✅ Venta ID {venta_obj['id']} eliminada y stock restaurado.")
+                
+                # Actualizar dict y recargar
+                st.session_state.ventas_dict.pop(venta_sel, None)
+                st.session_state.ventas_count -= 1
+                st.experimental_rerun()
+            except Exception as e:
+                st.error(f"Error al eliminar la venta: {str(e)}")
+    else:
+        st.error(f"❌ No se encontró el cliente con ID {venta_obj.get('cliente_id')}")

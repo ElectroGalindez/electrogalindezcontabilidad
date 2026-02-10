@@ -231,3 +231,13 @@ def eliminar_producto(id_producto: int, usuario: str = None):
             return None
         
         
+def increment_stock(producto_id, cantidad):
+    """
+    Aumenta la cantidad de stock de un producto.
+    """
+    producto = get_product(producto_id)
+    if producto:
+        nuevo_stock = float(producto.get("cantidad", 0)) + float(cantidad)
+        update_product(producto_id, nombre=producto["nombre"], cantidad=nuevo_stock, precio=producto["precio"])
+    else:
+        raise ValueError(f"Producto con ID {producto_id} no encontrado")
