@@ -5,6 +5,10 @@ from backend.deudas import add_debt
 from ui.error_handler import handle_app_error
 
 
+if "usuario" not in st.session_state or st.session_state.usuario is None:
+    st.warning("Debes iniciar sesión para acceder a esta página.")
+    st.stop()
+    
 # ---------------------------
 # Cache eficiente para clientes y productos
 # ---------------------------
