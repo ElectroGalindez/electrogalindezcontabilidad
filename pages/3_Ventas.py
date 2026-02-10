@@ -145,11 +145,13 @@ if st.session_state["items_venta"]:
                 else:
                     try:
                         monto_pagado = float(total) if pago_estado=="Pagado" else 0.0
+                        saldo_pendiente = float(total) - monto_pagado
                         nueva_venta = ventas.register_sale(
                             cliente_id=cliente_id,
-                            productos=st.session_state["items_venta"],
+                            productos_vendidos=st.session_state["items_venta"],
                             total=float(total),
                             pagado=monto_pagado,
+                            saldo=saldo_pendiente,
                             usuario=usuario_actual,
                             tipo_pago=tipo_pago
                         )
@@ -175,112 +177,12 @@ if st.session_state["items_venta"]:
 import streamlit as st
 from backend import ventas, clientes
 
-# ---------------------------------------------------
-# 🔧 CONFIGURACIÓN INICIAL
-# ---------------------------------------------------
-st.markdown("---")
-st.title("💳 Generar Factura Profesional en PDF")
-
-# ===========================
-# 1) SELECCIÓN DE VENTA
-# ===========================
-
-# Cargar ventas actuales desde la base de datos
-ventas_list = ventas.list_sales()
-
-# Inicializar contador para detectar cambios
-if "ventas_count" not in st.session_state:
-    st.session_state.ventas_count = len(ventas_list)
-
-# Si cambió la cantidad de ventas → actualizar diccionario
-if len(ventas_list) != st.session_state.ventas_count:
-    st.session_state.ventas_dict = None
-    st.session_state.ventas_count = len(ventas_list)
-
-# Crear el diccionario si no existe o si fue forzado a actualizarse
-if "ventas_dict" not in st.session_state or st.session_state.ventas_dict is None:
-    st.session_state.ventas_dict = {
-        f"ID {v['id']} - Cliente {v.get('cliente_id','N/A')} - Total ${v.get('total', 0):.2f}": v
-        for v in ventas_list
-    }
-
-venta_keys = [""] + list(st.session_state.ventas_dict.keys())
-venta_sel = st.selectbox("Selecciona venta", venta_keys)
-
-if not venta_sel:
-    st.stop()
-
-venta_obj = st.session_state.ventas_dict[venta_sel]
-cliente_obj = clientes.get_client(venta_obj.get("cliente_id"))
-
-if not cliente_obj:
-    st.error(f"❌ No se encontró el cliente con ID {venta_obj.get('cliente_id')}")
-    st.stop()
-
-productos_vendidos = venta_obj.get("productos_vendidos", [])
-
-
-
-# ===========================
-# 2) FORMULARIO DE DATOS PARA FACTURA
-# ===========================
-with st.form("form_datos_factura"):
-    st.subheader("✏️ Datos adicionales (solo para la factura)")
-
-    observaciones = st.text_area("Observaciones", value=venta_obj.get("observaciones", ""))
-
-    col1, col2 = st.columns(2)
-    with col1:
-        vendedor = st.text_input("Vendedor", value=venta_obj.get("vendedor", ""))
-        chofer = st.text_input("Chofer", value=venta_obj.get("chofer", ""))
-    with col2:
-        telefono_vendedor = st.text_input("Teléfono del Vendedor", value=venta_obj.get("telefono_vendedor", ""))
-        chapa = st.text_input("Chapa", value=venta_obj.get("chapa", ""))
-
-    generar_y_descargar = st.form_submit_button("🖨️ Generar y Descargar Factura PDF")
-
-# ===========================
-# 3) GENERAR PDF Y DESCARGA
-# ===========================
-if generar_y_descargar:
-    # Guardamos los datos solo en memoria (NO BD)
-    venta_obj["observaciones"] = observaciones
-    venta_obj["vendedor"] = vendedor
-    venta_obj["telefono_vendedor"] = telefono_vendedor
-    venta_obj["chofer"] = chofer
-    venta_obj["chapa"] = chapa
-
-    st.session_state.ventas_dict[venta_sel] = venta_obj
-
-    # Definir gestor_info **antes de usarlo**
-    gestor_info = {
-        "vendedor": f"{vendedor} (+53 {telefono_vendedor})" if vendedor else "",
-        "chofer": chofer,
-        "chapa": chapa
-    }
-
-    pdf_bytes = ventas.generar_factura_pdf(
-        venta_obj,
-        cliente_obj,
-        productos_vendidos,
-        gestor_info=gestor_info,
-        logo_path="assets/logo.png"
-    )
-
-    st.download_button(
-        label=f"⬇️ Descargar Factura PDF {venta_obj.get('id')}",
-        data=pdf_bytes,
-        file_name=f"Factura_{venta_obj.get('id')}.pdf",
-        mime="application/pdf"
-    )
-    st.success("Factura generada y lista para descargar ✔")
-
 import streamlit as st
 import pandas as pd
 from backend import ventas, clientes
 
 st.set_page_config(page_title="Gestionar Ventas", layout="wide")
-st.title("🛠️ Gestionar Ventas Registradas")
+st.title("🛠️ Gestionar Ventas y Generar Factura PDF")
 
 # Usuario actual
 usuario_actual = st.session_state.usuario["username"] if "usuario" in st.session_state else "sistema"
@@ -312,56 +214,118 @@ if "ventas_dict" not in st.session_state or st.session_state.ventas_dict is None
 venta_keys = [""] + list(st.session_state.ventas_dict.keys())
 venta_sel = st.selectbox("Selecciona una venta", venta_keys)
 
-if venta_sel:
-    venta_obj = st.session_state.ventas_dict[venta_sel]
-    cliente_obj = clientes.get_client(venta_obj.get("cliente_id"))
-    
-    if cliente_obj:
-        st.subheader(f"Detalles de la Venta ID {venta_obj['id']}")
-        col1, col2 = st.columns(2)
-        
-        # Info general
-        with col1:
-            st.markdown(f"**Cliente:** {cliente_obj.get('nombre','N/A')}")
-            st.markdown(f"**CI:** {cliente_obj.get('ci','')}")
-            st.markdown(f"**Dirección:** {cliente_obj.get('direccion','')}")
-            st.markdown(f"**Teléfono:** {cliente_obj.get('telefono','')}")
-            st.markdown(f"**Chapa:** {cliente_obj.get('chapa','')}")
-        with col2:
-            st.markdown(f"**Fecha:** {venta_obj.get('fecha')}")
-            st.markdown(f"**Total:** ${venta_obj.get('total',0):.2f}")
-            st.markdown(f"**Pagado:** ${venta_obj.get('pagado',0):.2f}")
-            st.markdown(f"**Saldo pendiente:** ${float(venta_obj.get('total',0)) - float(venta_obj.get('pagado',0)):.2f}")
-            st.markdown(f"**Tipo de pago:** {venta_obj.get('tipo_pago','')}")
-            st.markdown(f"**Usuario:** {venta_obj.get('usuario','')}")
-        
-        # Productos vendidos
-        st.markdown("**Productos vendidos:**")
-        df_productos = pd.DataFrame(venta_obj.get("productos_vendidos", []))
-        if not df_productos.empty:
-            df_productos["Subtotal"] = df_productos["cantidad"] * df_productos["precio_unitario"]
-            df_display = df_productos.copy()
-            df_display["precio_unitario"] = df_display["precio_unitario"].map("${:,.2f}".format)
-            df_display["Subtotal"] = df_display["Subtotal"].map("${:,.2f}".format)
-            st.dataframe(df_display[["nombre","cantidad","precio_unitario","Subtotal"]], use_container_width=True)
-        else:
-            st.info("No hay productos registrados en esta venta.")
+if not venta_sel:
+    st.stop()
 
-        # --------------------------
-        # Botón de eliminar venta
-        # --------------------------
-        st.subheader("⚠️ Eliminar venta (solo si fue un error)")
-        confirmar = st.checkbox(f"Confirmar eliminación de venta ID {venta_obj['id']}", key=f"confirm_{venta_obj['id']}")
-        if confirmar and st.button("🗑️ Eliminar venta", key=f"delete_{venta_obj['id']}"):
-            try:
-                ventas.delete_sale(venta_obj["id"], usuario=usuario_actual)
-                st.success(f"✅ Venta ID {venta_obj['id']} eliminada y stock restaurado.")
-                
-                # Actualizar dict y recargar
-                st.session_state.ventas_dict.pop(venta_sel, None)
-                st.session_state.ventas_count -= 1
-                st.experimental_rerun()
-            except Exception as e:
-                st.error(f"Error al eliminar la venta: {str(e)}")
-    else:
-        st.error(f"❌ No se encontró el cliente con ID {venta_obj.get('cliente_id')}")
+# --------------------------
+# Obtener objeto venta y cliente
+# --------------------------
+venta_obj = st.session_state.ventas_dict[venta_sel]
+cliente_obj = clientes.get_client(venta_obj.get("cliente_id"))
+
+if not cliente_obj:
+    st.error(f"❌ No se encontró el cliente con ID {venta_obj.get('cliente_id')}")
+    st.stop()
+
+productos_vendidos = venta_obj.get("productos_vendidos", [])
+
+# ===========================
+# Detalles de la venta
+# ===========================
+st.subheader(f"Detalles de la Venta ID {venta_obj['id']}")
+col1, col2 = st.columns(2)
+
+with col1:
+    st.markdown(f"**Cliente:** {cliente_obj.get('nombre','N/A')}")
+    st.markdown(f"**CI:** {cliente_obj.get('ci','')}")
+    st.markdown(f"**Dirección:** {cliente_obj.get('direccion','')}")
+    st.markdown(f"**Teléfono:** {cliente_obj.get('telefono','')}")
+    st.markdown(f"**Chapa:** {cliente_obj.get('chapa','')}")
+with col2:
+    st.markdown(f"**Fecha:** {venta_obj.get('fecha')}")
+    st.markdown(f"**Total:** ${venta_obj.get('total',0):.2f}")
+    st.markdown(f"**Pagado:** ${venta_obj.get('pagado',0):.2f}")
+    st.markdown(f"**Saldo pendiente:** ${float(venta_obj.get('total',0)) - float(venta_obj.get('pagado',0)):.2f}")
+    st.markdown(f"**Tipo de pago:** {venta_obj.get('tipo_pago','')}")
+    st.markdown(f"**Usuario:** {venta_obj.get('usuario','')}")
+
+# Productos vendidos
+st.markdown("**Productos vendidos:**")
+df_productos = pd.DataFrame(productos_vendidos)
+if not df_productos.empty:
+    df_productos["Subtotal"] = df_productos["cantidad"] * df_productos["precio_unitario"]
+    df_display = df_productos.copy()
+    df_display["precio_unitario"] = df_display["precio_unitario"].map("${:,.2f}".format)
+    df_display["Subtotal"] = df_display["Subtotal"].map("${:,.2f}".format)
+    st.dataframe(df_display[["nombre","cantidad","precio_unitario","Subtotal"]], use_container_width=True)
+else:
+    st.info("No hay productos registrados en esta venta.")
+
+# ===========================
+# Formulario para datos extra y PDF
+# ===========================
+with st.form("form_datos_factura"):
+    st.subheader("✏️ Datos adicionales (solo para la factura)")
+    
+    observaciones = st.text_area("Observaciones", value=venta_obj.get("observaciones", ""))
+    col1, col2 = st.columns(2)
+    with col1:
+        vendedor = st.text_input("Vendedor", value=venta_obj.get("vendedor", ""))
+        chofer = st.text_input("Chofer", value=venta_obj.get("chofer", ""))
+    with col2:
+        telefono_vendedor = st.text_input("Teléfono del Vendedor", value=venta_obj.get("telefono_vendedor", ""))
+        chapa = st.text_input("Chapa", value=venta_obj.get("chapa", ""))
+    
+    generar_pdf = st.form_submit_button("🖨️ Generar y Descargar Factura PDF")
+
+# ===========================
+# Generar PDF
+# ===========================
+if generar_pdf:
+    # Guardamos los datos solo en memoria
+    venta_obj.update({
+        "observaciones": observaciones,
+        "vendedor": vendedor,
+        "telefono_vendedor": telefono_vendedor,
+        "chofer": chofer,
+        "chapa": chapa
+    })
+    st.session_state.ventas_dict[venta_sel] = venta_obj
+
+    gestor_info = {
+        "vendedor": f"{vendedor} (+53 {telefono_vendedor})" if vendedor else "",
+        "chofer": chofer,
+        "chapa": chapa
+    }
+
+    pdf_bytes = ventas.generar_factura_pdf(
+        venta_obj,
+        cliente_obj,
+        productos_vendidos,
+        gestor_info=gestor_info,
+        logo_path="assets/logo.png"
+    )
+
+    st.download_button(
+        label=f"⬇️ Descargar Factura PDF {venta_obj.get('id')}",
+        data=pdf_bytes,
+        file_name=f"Factura_{venta_obj.get('id')}.pdf",
+        mime="application/pdf"
+    )
+    st.success("Factura generada y lista para descargar ✔")
+
+# ===========================
+# Eliminar venta
+# ===========================
+st.subheader("⚠️ Eliminar venta (solo si fue un error)")
+confirmar = st.checkbox(f"Confirmar eliminación de venta ID {venta_obj['id']}", key=f"confirm_{venta_obj['id']}")
+if confirmar and st.button("🗑️ Eliminar venta", key=f"delete_{venta_obj['id']}"):
+    try:
+        ventas.delete_sale(venta_obj["id"], usuario=usuario_actual)
+        st.success(f"✅ Venta ID {venta_obj['id']} eliminada y stock restaurado.")
+        # Actualizar dict y recargar
+        st.session_state.ventas_dict.pop(venta_sel, None)
+        st.session_state.ventas_count -= 1
+        st.rerun()
+    except Exception as e:
+        st.error(f"Error al eliminar la venta: {str(e)}")

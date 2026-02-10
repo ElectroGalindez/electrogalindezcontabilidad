@@ -104,6 +104,7 @@ def add_debt(
 def pay_debt_producto(deuda_id: int, producto_id: int, monto_pago: float, usuario: Optional[str] = None) -> Dict[str, Any]:
     """
     Aplica un pago solo sobre un detalle de deuda (producto) específico.
+    Actualiza la cantidad pendiente proporcionalmente al pago.
     """
     deuda = get_debt(deuda_id)
     if not deuda:
@@ -113,21 +114,28 @@ def pay_debt_producto(deuda_id: int, producto_id: int, monto_pago: float, usuari
     if not detalle:
         raise KeyError(f"Producto {producto_id} no encontrado en la deuda {deuda_id}")
 
-    monto_detalle = float(detalle["cantidad"]) * float(detalle["precio_unitario"])
-    if monto_pago <= 0 or monto_pago > monto_detalle:
-        raise ValueError(f"Monto de pago inválido. Debe ser entre 0 y {monto_detalle}")
+    cantidad_pendiente = float(detalle["cantidad"])
+    precio_unitario = float(detalle["precio_unitario"])
+    monto_total_pendiente = cantidad_pendiente * precio_unitario
 
-    nuevo_saldo_det = monto_detalle - monto_pago
-    nuevo_estado_det = "pagado" if nuevo_saldo_det == 0 else "pendiente"
+    if monto_pago <= 0 or monto_pago > monto_total_pendiente:
+        raise ValueError(f"Monto de pago inválido. Debe ser entre 0 y {monto_total_pendiente}")
+
+    # -----------------------------
+    # Calcular cantidad pagada y nueva cantidad pendiente
+    # -----------------------------
+    cantidad_pagada = monto_pago / precio_unitario
+    nueva_cantidad = round(max(cantidad_pendiente - cantidad_pagada, 0), 4)
+
+    nuevo_estado_det = "pagado" if nueva_cantidad == 0 else "pendiente"
 
     with engine.begin() as conn:
-        if nuevo_estado_det == "pagado":
-            conn.execute(text("UPDATE deudas_detalle SET estado='pagado' WHERE id=:id"), {"id": detalle["id"]})
-        else:
-            # Ajusta el precio unitario proporcionalmente si es pago parcial
-            nuevo_precio_unit = nuevo_saldo_det / float(detalle["cantidad"])
-            conn.execute(text("UPDATE deudas_detalle SET precio_unitario=:nuevo_precio WHERE id=:id"),
-                         {"nuevo_precio": nuevo_precio_unit, "id": detalle["id"]})
+        # Actualizar detalle de deuda
+        conn.execute(text("""
+            UPDATE deudas_detalle
+            SET cantidad = :nueva_cantidad, estado = :nuevo_estado
+            WHERE id = :id
+        """), {"nueva_cantidad": nueva_cantidad, "nuevo_estado": nuevo_estado_det, "id": detalle["id"]})
 
         # Actualizar deuda principal
         nuevo_monto_total = round(float(deuda["monto_total"]) - monto_pago, 2)
@@ -150,7 +158,8 @@ def pay_debt_producto(deuda_id: int, producto_id: int, monto_pago: float, usuari
             "cliente_id": deuda["cliente_id"],
             "producto_id": producto_id,
             "monto_pago": monto_pago,
-            "saldo_restante": nuevo_saldo_det,
+            "cantidad_pagada": cantidad_pagada,
+            "cantidad_restante": nueva_cantidad,
             "estado_final": nuevo_estado_det
         })
     except Exception:
@@ -247,4 +256,79 @@ def list_clientes_con_deuda():
     with engine.connect() as conn:
         result = conn.execute(query)
         return [dict(row._mapping) for row in result]
+
+from reportlab.lib.pagesizes import letter
+from reportlab.lib import colors
+from reportlab.platypus import Table, TableStyle
+from reportlab.pdfgen import canvas
+from reportlab.lib.utils import ImageReader
+from io import BytesIO
+import os
+
+def generar_factura_pago_deuda(cliente: dict, detalle_deuda: dict, monto_pagado: float, logo_path="assets/logo.png"):
+    """
+    Genera un PDF de comprobante de pago de deuda.
     
+    cliente: dict con info del cliente
+    detalle_deuda: dict con info de deuda/detalle producto pagado
+    monto_pagado: float con el monto pagado
+    logo_path: ruta al logo de la empresa
+    """
+    buffer = BytesIO()
+    c = canvas.Canvas(buffer, pagesize=letter)
+    width, height = letter
+    line_height = 15
+
+    # Cargar logo
+    logo = None
+    if os.path.exists(logo_path):
+        try:
+            logo = ImageReader(logo_path)
+        except Exception as e:
+            print(f"No se pudo cargar el logo: {e}")
+
+    def dibujar_factura(y_offset=0):
+        nonlocal c
+        # ---------------- Logo ----------------
+        if logo:
+            c.drawImage(logo, 40, height - 85 - y_offset, width=80, height=70, preserveAspectRatio=True)
+        # ------------- Empresa ----------------
+        c.setFont("Helvetica-Bold", 14)
+        c.drawString(130, height - 50 - y_offset, "Omar Galíndez Ramirez. CI: 85082506984")
+        c.setFont("Helvetica", 10)
+        c.drawString(130, height - 65 - y_offset, f"Comprobante de pago de deuda")
+        c.drawString(130, height - 80 - y_offset, f"Fecha: {detalle_deuda.get('fecha','')}")
+
+        # ------------- Cliente ----------------
+        col1_x = 40
+        row_y = height - 110 - y_offset
+        c.drawString(col1_x, row_y, f"Cliente: {cliente.get('nombre','')}"); row_y -= line_height
+        c.drawString(col1_x, row_y, f"CI: {cliente.get('ci','')}"); row_y -= line_height
+        c.drawString(col1_x, row_y, f"Teléfono: {cliente.get('telefono','')}"); row_y -= line_height
+
+        # ------------- Pago ----------------
+        col2_x = 320
+        row_y2 = height - 110 - y_offset
+        c.drawString(col2_x, row_y2, f"Producto: {detalle_deuda.get('producto','')}"); row_y2 -= line_height
+        c.drawString(col2_x, row_y2, f"Cantidad pagada: {detalle_deuda.get('cantidad_pagada',detalle_deuda.get('cantidad',0))}"); row_y2 -= line_height
+        c.drawString(col2_x, row_y2, f"Monto pagado: ${monto_pagado:,.2f}"); row_y2 -= line_height
+        c.drawString(col2_x, row_y2, f"Saldo restante: ${detalle_deuda.get('monto_restante',0):,.2f}"); row_y2 -= line_height
+
+        # ------------- Firma ----------------
+        firma_y = row_y2 - 40
+        c.drawString(40, firma_y, "__________________________")
+        c.drawString(40, firma_y - 10, "Firma Cliente")
+        c.drawString(320, firma_y, "__________________________")
+        c.drawString(320, firma_y - 10, "Firma Empresa")
+
+    # Dibujar dos facturas en la misma hoja
+    dibujar_factura(y_offset=0)
+    c.setStrokeColor(colors.gray)
+    c.setLineWidth(1)
+    c.line(40, height/2, width-40, height/2)
+    dibujar_factura(y_offset=height/2)
+
+    c.showPage()
+    c.save()
+    buffer.seek(0)
+    return buffer.getvalue()

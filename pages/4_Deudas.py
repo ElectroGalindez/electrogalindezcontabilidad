@@ -67,6 +67,9 @@ cliente_id = clientes_opciones.get(cliente_sel)
 # ==========================================================
 # TABLA DE DEUDAS DEL CLIENTE
 # ==========================================================
+# ==========================================================
+# 📋 BLOQUE DE DEUDAS PENDIENTES DEL CLIENTE
+# ==========================================================
 if cliente_sel and cliente_id:
 
     cliente_obj = clientes.get_client(cliente_id)
@@ -78,6 +81,7 @@ if cliente_sel and cliente_id:
         unsafe_allow_html=True
     )
 
+    # Cargar deudas del cliente
     deudas_cliente = load_deudas_cliente(cliente_id)
 
     filas_pendientes = []
@@ -105,8 +109,10 @@ if cliente_sel and cliente_id:
 
     st.subheader("📋 Deudas Pendientes del Cliente")
 
-    if not df_pendientes.empty:
-
+    if df_pendientes.empty:
+        st.info("✔ Este cliente no tiene deudas pendientes.")
+    else:
+        # Mostrar tabla de deudas
         st.dataframe(
             df_pendientes[["Producto","Cantidad", "Precio Unitario", "Monto Pendiente", "Fecha"]]
             .sort_values("Fecha", ascending=False)
@@ -119,7 +125,9 @@ if cliente_sel and cliente_id:
             height=200
         )
 
-        # Selector de deuda
+        # -----------------------------
+        # Selector de deuda a pagar
+        # -----------------------------
         opciones_deuda = {
             f"{row['Producto']} - {row['Fecha']} (${row['Monto Pendiente']:,.2f})": row
             for _, row in df_pendientes.iterrows()
@@ -138,6 +146,9 @@ if cliente_sel and cliente_id:
 
             st.markdown(f"### 💵 Monto pendiente de la deuda: **${monto_actual:,.2f}**")
 
+            # -----------------------------
+            # Input monto a pagar
+            # -----------------------------
             monto_pago = st.number_input(
                 "Monto a pagar",
                 min_value=0.01,
@@ -147,42 +158,46 @@ if cliente_sel and cliente_id:
                 key=f"monto_pago_{detalle_id}"
             )
 
-            if st.button("Registrar Pago", key=f"btn_pagar_{detalle_id}"):
+            # -----------------------------
+            # Botón registrar pago + generar PDF
+            # -----------------------------
+            if st.button(f"Registrar pago y generar factura (${monto_pago:,.2f})", key=f"btn_pagar_{detalle_id}"):
                 try:
-                    deudas.pay_debt_producto(
+                    # Registrar pago
+                    resultado = deudas.pay_debt_producto(
                         deuda_id=detalle["Deuda ID"],
                         producto_id=detalle["Producto ID"],
-                        monto_pago=monto_pago
+                        monto_pago=monto_pago,
+                        usuario=st.session_state.get("usuario", "desconocido")
+                    )
+                    st.success(f"💰 Pago de ${monto_pago:,.2f} registrado correctamente.")
+
+                    # -----------------------------
+                    # Generar PDF doble
+                    # -----------------------------
+                    from backend.ventas import generar_factura_pago_deuda
+
+                    detalle_factura = {
+                        "producto": detalle["Producto"],
+                        "cantidad_pagada": round(monto_pago / detalle.get("Precio Unitario", 1), 2),
+                        "fecha": detalle["Fecha"]
+                    }
+
+                    pdf_bytes = generar_factura_pago_deuda(cliente_obj, detalle_factura, monto_pagado=monto_pago)
+
+                    st.download_button(
+                        label="⬇️ Descargar Comprobante de Pago",
+                        data=pdf_bytes,
+                        file_name=f"ComprobantePago_{detalle['Deuda ID']}_{detalle['Producto ID']}.pdf",
+                        mime="application/pdf"
                     )
 
-                    # Limpia cachés para refrescar
+                    # Limpiar cache y recargar
                     st.cache_data.clear()
-
-                    st.success(f"💰 Pago de ${monto_pago:,.2f} registrado correctamente.")
                     st.rerun()
 
                 except Exception as e:
                     st.error(f"❌ Error al registrar el pago: {str(e)}")
-
-        # Exportar Excel
-        buffer = BytesIO()
-        with pd.ExcelWriter(buffer, engine="xlsxwriter") as writer:
-            df_pendientes.to_excel(writer, index=False, sheet_name="DeudasPendientes")
-
-        st.download_button(
-            "⬇️ Descargar Deudas Pendientes del Cliente",
-            buffer.getvalue(),
-            f"deudas_pendientes_cliente_{cliente_id}.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        )
-
-    else:
-        st.info("✔ Este cliente no tiene deudas pendientes.")
-
-else:
-    st.info("🔍 Selecciona un cliente para ver sus deudas específicas.")
-
-
 
 # ==========================================================
 # TABLA GENERAL DE TODAS LAS DEUDAS PENDIENTES
