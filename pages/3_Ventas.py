@@ -142,7 +142,7 @@ try:
         with col_b:
             if cliente_id:
                 pago_estado = st.radio("Estado del pago", ["Pagado", "Pendiente"])
-                tipo_pago = st.selectbox("Método de pago", ["Efectivo", "Transferencia", "Tarjeta", "Otro"], key="tipo_pago_venta") if pago_estado=="Pagado" else "Pendiente"
+                tipo_pago = st.selectbox("Método de pago", ["Efectivo", "Zelle"], key="tipo_pago_venta") if pago_estado=="Pagado" else "Pendiente"
 
                 if st.button("💾 Registrar Venta", key="registrar_venta"):
                     if not st.session_state["items_venta"]:
@@ -179,12 +179,6 @@ try:
                         except Exception as e:
                             st.error(f"Error al registrar la venta: {str(e)}")
 
-    import streamlit as st
-    from backend import ventas, clientes
-
-    import streamlit as st
-    import pandas as pd
-    from backend import ventas, clientes
 
     st.set_page_config(page_title="Gestionar Ventas", layout="wide")
     st.title("🛠️ Gestionar Ventas y Generar Factura PDF")
