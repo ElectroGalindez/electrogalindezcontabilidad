@@ -156,7 +156,7 @@ try:
                             saldo_pendiente = float(total) - monto_pagado
                             nueva_venta = ventas.register_sale(
                                 cliente_id=cliente_id,
-                                productos_vendidos=st.session_state["items_venta"],
+                                productos=st.session_state["items_venta"],
                                 total=float(total),
                                 pagado=monto_pagado,
                                 saldo=saldo_pendiente,
@@ -183,41 +183,60 @@ try:
                             st.error(f"Error al registrar la venta: {str(e)}")
 
 
-    st.set_page_config(page_title="Gestionar Ventas", layout="wide")
     st.title("🛠️ Gestionar Ventas y Generar Factura PDF")
-
-    # Usuario actual
-    usuario_actual = st.session_state.usuario["username"] if "usuario" in st.session_state else "sistema"
 
     # --------------------------
     # Cargar ventas
     # --------------------------
     ventas_list = ventas.list_sales()
 
-    # Inicializar contador para detectar cambios
-    if "ventas_count" not in st.session_state:
-        st.session_state.ventas_count = len(ventas_list)
+    # --------------------------
+    # Crear mapa ID → Nombre Cliente
+    # --------------------------
+    clientes_map = {c["id"]: c["nombre"] for c in clientes_data}
 
-    # Actualizar diccionario si cambió la cantidad de ventas
-    if len(ventas_list) != st.session_state.ventas_count:
-        st.session_state.ventas_dict = None
-        st.session_state.ventas_count = len(ventas_list)
+    # --------------------------
+    # Crear diccionario legible SIEMPRE
+    # --------------------------
+    ventas_dict = {}
 
-    # Crear diccionario de ventas si no existe
-    if "ventas_dict" not in st.session_state or st.session_state.ventas_dict is None:
-        st.session_state.ventas_dict = {
-            f"ID {v['id']} - Cliente {v.get('cliente_id','N/A')} - Total ${v.get('total',0):.2f}": v
-            for v in ventas_list
-        }
+    for v in ventas_list:
+        cliente_id = v.get("cliente_id")
+        nombre_cliente = clientes_map.get(cliente_id, "N/A")
+
+        fecha = ""
+        if v.get("fecha"):
+            fecha_obj = v["fecha"]
+
+            if hasattr(fecha_obj, "strftime"):
+                fecha = fecha_obj.strftime("%d/%m/%Y %H:%M")
+            else:
+                fecha = str(fecha_obj)
+
+        key = (
+            f"Factura #{v['id']} | "
+            f"{nombre_cliente} | "
+            f"{fecha}; | "
+            f"${float(v.get('total', 0)):,.2f}"
+        )
+
+        ventas_dict[key] = v
+
 
     # --------------------------
     # Selector de venta
     # --------------------------
-    venta_keys = [""] + list(st.session_state.ventas_dict.keys())
-    venta_sel = st.selectbox("Selecciona una venta", venta_keys)
+    venta_sel = st.selectbox(
+        "Selecciona una venta",
+        [""] + list(ventas_dict.keys()),
+        key="select_venta"
+    )
 
     if not venta_sel:
         st.stop()
+
+    venta_obj = ventas_dict[venta_sel]
+
 
     # --------------------------
     # Obtener objeto venta y cliente
