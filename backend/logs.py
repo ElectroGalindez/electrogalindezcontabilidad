@@ -8,23 +8,34 @@ from .db import engine  # Función que devuelve conexión SQLAlchemy
 # ---------------------------
 # Registrar un log
 # ---------------------------
-
-def registrar_log(usuario: str, accion: str, detalles: dict):
+def registrar_log(usuario: str, accion: str, detalles):
     """
     Registra una acción en la tabla de logs.
-    Convierte los dict a JSON para que PostgreSQL pueda almacenarlo.
+    Convierte dict o list a JSON string antes de guardar.
     """
-    if isinstance(detalles, dict):
-        detalles = json.dumps(detalles, default=str)  # default=str para datetime, Decimal, etc.
 
+    # Convertir detalles a JSON si es dict o list
+    if isinstance(detalles, (dict, list)):
+        detalles = json.dumps(detalles, default=str)
+
+    # Asegurar que usuario sea string
     if isinstance(usuario, dict):
-        usuario = usuario.get("username", "sistema")  # o json.dumps(usuario) si quieres guardar todo
+        usuario = usuario.get("username", "sistema")
 
     fecha = datetime.now()
+
     with engine.begin() as conn:
         conn.execute(
-            text("INSERT INTO logs (usuario, accion, detalles, fecha) VALUES (:usuario, :accion, :detalles, :fecha)"),
-            {"usuario": usuario, "accion": accion, "detalles": detalles, "fecha": fecha}
+            text("""
+                INSERT INTO logs (usuario, accion, detalles, fecha)
+                VALUES (:usuario, :accion, :detalles, :fecha)
+            """),
+            {
+                "usuario": usuario,
+                "accion": accion,
+                "detalles": detalles,
+                "fecha": fecha
+            }
         )
 
 # ---------------------------

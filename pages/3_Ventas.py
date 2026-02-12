@@ -153,13 +153,11 @@ try:
                     else:
                         try:
                             monto_pagado = float(total) if pago_estado=="Pagado" else 0.0
-                            saldo_pendiente = float(total) - monto_pagado
                             nueva_venta = ventas.register_sale(
                                 cliente_id=cliente_id,
                                 productos=st.session_state["items_venta"],
                                 total=float(total),
                                 pagado=monto_pagado,
-                                saldo=saldo_pendiente,
                                 usuario=usuario_actual,
                                 tipo_pago=tipo_pago
                             )

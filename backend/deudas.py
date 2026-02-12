@@ -123,7 +123,12 @@ def pay_debt_producto(deuda_id: int, producto_id: int, monto_pago: float, usuari
     if not deuda:
         raise KeyError(f"Deuda {deuda_id} no encontrada")
 
-    detalle = next((d for d in deuda.get("detalles", []) if d["producto_id"] == producto_id), None)
+    detalle = next(
+        (d for d in deuda.get("detalles", [])
+        if d.get("producto_id") == producto_id),
+        None
+    )
+
     if not detalle:
         raise KeyError(f"Producto {producto_id} no encontrado en la deuda {deuda_id}")
 

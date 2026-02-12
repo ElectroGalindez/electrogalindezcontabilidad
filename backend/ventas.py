@@ -12,18 +12,27 @@ import json
 # ----------------------------
 def register_sale(cliente_id, total, pagado, usuario, tipo_pago, productos=None):
     """
-    Registra una venta, descuenta del inventario y guarda productos vendidos como JSON.
+    Registra una venta, descuenta del inventario,
+    guarda productos vendidos como JSON y calcula saldo automáticamente.
     """
+
     fecha = datetime.now()
+    total = float(total)
+    pagado = float(pagado)
+    saldo = total - pagado
+
     productos_data = []
 
     with engine.begin() as conn:
-        # Preparar productos para guardar en JSON
+
+        # ----------------------------
+        # Procesar productos
+        # ----------------------------
         if productos:
             for item in productos:
                 prod_id = item.get("id_producto") or item.get("id")
                 cantidad_vendida = float(item.get("cantidad", 0))
-                precio_unitario = float(item.get("precio_unitario", 0.0))
+                precio_unitario = float(item.get("precio_unitario", 0))
                 subtotal = cantidad_vendida * precio_unitario
 
                 productos_data.append({
@@ -34,32 +43,74 @@ def register_sale(cliente_id, total, pagado, usuario, tipo_pago, productos=None)
                     "subtotal": subtotal
                 })
 
-                # Actualizar stock
+                # 🔹 Actualizar stock
                 producto = get_product(prod_id)
                 if producto:
                     stock_actual = float(producto.get("cantidad", 0))
-                    nuevo_stock = max(stock_actual - cantidad_vendida, 0)
-                    update_product(prod_id, nombre=producto["nombre"], cantidad=nuevo_stock, precio=producto["precio"])
 
-        # Guardar venta con productos en JSON
+                    if cantidad_vendida > stock_actual:
+                        raise ValueError(
+                            f"Stock insuficiente para {producto.get('nombre')}. "
+                            f"Disponible: {stock_actual}"
+                        )
+
+                    nuevo_stock = stock_actual - cantidad_vendida
+
+                    update_product(
+                        prod_id,
+                        nombre=producto["nombre"],
+                        cantidad=nuevo_stock,
+                        precio=producto["precio"]
+                    )
+
+        # ----------------------------
+        # Insertar venta
+        # ----------------------------
         query_venta = text("""
-            INSERT INTO ventas (cliente_id, total, pagado, usuario, tipo_pago, fecha, productos_vendidos)
-            VALUES (:cliente_id, :total, :pagado, :usuario, :tipo_pago, :fecha, :productos_vendidos)
+            INSERT INTO ventas 
+            (cliente_id, total, pagado, saldo, usuario, tipo_pago, fecha, productos_vendidos)
+            VALUES 
+            (:cliente_id, :total, :pagado, :saldo, :usuario, :tipo_pago, :fecha, :productos_vendidos)
             RETURNING id
         """)
+
         venta_id = conn.execute(query_venta, {
             "cliente_id": cliente_id,
             "total": total,
             "pagado": pagado,
+            "saldo": saldo,
             "usuario": usuario,
             "tipo_pago": tipo_pago,
             "fecha": fecha,
-            "productos_vendidos": json.dumps(productos_data)  # 🔹 Aquí se guarda el detalle
+            "productos_vendidos": json.dumps(productos_data)
         }).scalar()
 
-        registrar_log(usuario, "registrar_venta", {"venta_id": venta_id, "total": total, "pagado": pagado})
+        # ----------------------------
+        # Registrar log
+        # ----------------------------
+        registrar_log(
+            usuario,
+            "registrar_venta",
+            {
+                "venta_id": venta_id,
+                "cliente_id": cliente_id,
+                "total": total,
+                "pagado": pagado,
+                "saldo": saldo
+            }
+        )
 
-    return {"id": venta_id, "total": total, "pagado": pagado, "fecha": fecha, "productos_vendidos": productos_data}
+    return {
+        "id": venta_id,
+        "cliente_id": cliente_id,
+        "total": total,
+        "pagado": pagado,
+        "saldo": saldo,
+        "usuario": usuario,
+        "tipo_pago": tipo_pago,
+        "fecha": fecha,
+        "productos_vendidos": productos_data
+    }
 
 
 def editar_venta_extra(
@@ -122,19 +173,29 @@ def list_sales():
 
     return ventas_list
 
-
 def get_sale(sale_id: str) -> Optional[Dict]:
     """Devuelve una venta por su ID"""
     query = text("SELECT * FROM ventas WHERE id = :id")
     with engine.connect() as conn:
         result = conn.execute(query, {"id": sale_id}).mappings().first()
+
     if result:
         r = dict(result)
-        r["productos_vendidos"] = json.loads(r["productos_vendidos"])
+        productos = r.get("productos_vendidos")
+
+        # ✅ Solo hacer json.loads si es string
+        if isinstance(productos, str):
+            try:
+                r["productos_vendidos"] = json.loads(productos)
+            except json.JSONDecodeError:
+                r["productos_vendidos"] = []
+        else:
+            # Si ya es lista/dict, dejarlo como está
+            r["productos_vendidos"] = productos or []
+
         return r
+
     return None
-import copy
-import json
 
 def delete_sale(sale_id: str, usuario: Optional[str] = None) -> bool:
     """Elimina una venta por su ID y devuelve productos al stock"""
