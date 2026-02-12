@@ -3,42 +3,22 @@ from typing import  Dict, Optional
 from datetime import datetime
 from sqlalchemy import text
 from backend.db import engine
-from .productos import  get_product, update_product
+from .productos import  get_product, update_product, increment_stock
 from .logs import registrar_log
 import json
 
 # ------------------------------
 # Registrar venta
 # ----------------------------
-def register_sale(cliente_id, total, pagado, usuario, tipo_pago, productos=None,
-                  observaciones=None, vendedor=None, chofer=None, chapa=None):
+def register_sale(cliente_id, total, pagado, usuario, tipo_pago, productos=None):
     """
     Registra una venta, descuenta del inventario y guarda productos vendidos como JSON.
-    Parámetros:
-        cliente_id: ID del cliente
-        total: Total de la venta
-        pagado: Monto pagado
-        usuario: Usuario que registra la venta
-        tipo_pago: Tipo de pago ("Efectivo", "Tarjeta", "Pendiente", etc.)
-        productos: Lista de dicts de productos vendidos con keys:
-                   id_producto, nombre, cantidad, precio_unitario
-        observaciones: Texto opcional
-        vendedor, chofer, chapa: Datos opcionales
-    Retorna:
-        dict con la venta registrada y productos vendidos
     """
-    from datetime import datetime
-    import json
-    from sqlalchemy import text
-    from backend.db import engine
-    from .productos import get_product, update_product
-    from .logs import registrar_log
-
     fecha = datetime.now()
     productos_data = []
 
     with engine.begin() as conn:
-        # Preparar productos para guardar en JSON y actualizar stock
+        # Preparar productos para guardar en JSON
         if productos:
             for item in productos:
                 prod_id = item.get("id_producto") or item.get("id")
@@ -46,35 +26,25 @@ def register_sale(cliente_id, total, pagado, usuario, tipo_pago, productos=None,
                 precio_unitario = float(item.get("precio_unitario", 0.0))
                 subtotal = cantidad_vendida * precio_unitario
 
-                # Validar stock
-                producto = get_product(prod_id)
-                if not producto:
-                    raise KeyError(f"Producto con ID {prod_id} no encontrado.")
-                stock_actual = float(producto.get("cantidad", 0))
-                if cantidad_vendida > stock_actual:
-                    raise ValueError(f"Stock insuficiente para {producto['nombre']}: {stock_actual} disponible, se intenta vender {cantidad_vendida}")
-
-                nuevo_stock = stock_actual - cantidad_vendida
-                update_product(prod_id, nombre=producto["nombre"], cantidad=nuevo_stock, precio=producto["precio"])
-
                 productos_data.append({
                     "id_producto": prod_id,
-                    "nombre": producto.get("nombre"),
+                    "nombre": item.get("nombre"),
                     "cantidad": cantidad_vendida,
                     "precio_unitario": precio_unitario,
                     "subtotal": subtotal
                 })
 
-        # Guardar venta en la base de datos
+                # Actualizar stock
+                producto = get_product(prod_id)
+                if producto:
+                    stock_actual = float(producto.get("cantidad", 0))
+                    nuevo_stock = max(stock_actual - cantidad_vendida, 0)
+                    update_product(prod_id, nombre=producto["nombre"], cantidad=nuevo_stock, precio=producto["precio"])
+
+        # Guardar venta con productos en JSON
         query_venta = text("""
-            INSERT INTO ventas (
-                cliente_id, total, pagado, usuario, tipo_pago, fecha,
-                productos_vendidos, observaciones, vendedor, chofer, chapa
-            )
-            VALUES (
-                :cliente_id, :total, :pagado, :usuario, :tipo_pago, :fecha,
-                :productos_vendidos, :observaciones, :vendedor, :chofer, :chapa
-            )
+            INSERT INTO ventas (cliente_id, total, pagado, usuario, tipo_pago, fecha, productos_vendidos)
+            VALUES (:cliente_id, :total, :pagado, :usuario, :tipo_pago, :fecha, :productos_vendidos)
             RETURNING id
         """)
         venta_id = conn.execute(query_venta, {
@@ -84,35 +54,13 @@ def register_sale(cliente_id, total, pagado, usuario, tipo_pago, productos=None,
             "usuario": usuario,
             "tipo_pago": tipo_pago,
             "fecha": fecha,
-            "productos_vendidos": json.dumps(productos_data),
-            "observaciones": observaciones,
-            "vendedor": vendedor,
-            "chofer": chofer,
-            "chapa": chapa
+            "productos_vendidos": json.dumps(productos_data)  # 🔹 Aquí se guarda el detalle
         }).scalar()
 
-        # Registrar log completo
-        registrar_log(usuario, "registrar_venta", {
-            "venta_id": venta_id,
-            "total": total,
-            "pagado": pagado,
-            "productos": productos_data,
-            "tipo_pago": tipo_pago,
-            "observaciones": observaciones
-        })
+        registrar_log(usuario, "registrar_venta", {"venta_id": venta_id, "total": total, "pagado": pagado})
 
-    return {
-        "id": venta_id,
-        "total": total,
-        "pagado": pagado,
-        "fecha": fecha,
-        "productos_vendidos": productos_data,
-        "tipo_pago": tipo_pago,
-        "observaciones": observaciones,
-        "vendedor": vendedor,
-        "chofer": chofer,
-        "chapa": chapa
-    }
+    return {"id": venta_id, "total": total, "pagado": pagado, "fecha": fecha, "productos_vendidos": productos_data}
+
 
 def editar_venta_extra(
     sale_id: str,
@@ -185,19 +133,33 @@ def get_sale(sale_id: str) -> Optional[Dict]:
         r["productos_vendidos"] = json.loads(r["productos_vendidos"])
         return r
     return None
-
-
+import copy
+import json
 
 def delete_sale(sale_id: str, usuario: Optional[str] = None) -> bool:
-    """Elimina una venta por su ID"""
+    """Elimina una venta por su ID y devuelve productos al stock"""
     sale = get_sale(sale_id)
     if not sale:
         return False
 
+    # Devolver productos al stock
+    for item in sale.get("productos_vendidos", []):
+        increment_stock(item["id_producto"], item["cantidad"])
+
+    # Eliminar la venta de la BD
     with engine.begin() as conn:
         conn.execute(text("DELETE FROM ventas WHERE id = :id"), {"id": sale_id})
 
-    registrar_log(usuario or "sistema", "eliminar_venta", {"venta_id": sale_id, "venta": sale})
+    # 🔹 Preparar datos para el log sin que falle JSON
+    log_detalles = copy.deepcopy(sale)
+
+    # Convertir cualquier lista/dict anidado a string JSON
+    for key, value in log_detalles.items():
+        if isinstance(value, (list, dict)):
+            log_detalles[key] = json.dumps(value)
+
+    registrar_log(usuario or "sistema", "eliminar_venta", {"venta_id": sale_id, "venta": log_detalles})
+
     return True
 
 def listar_ventas_dict():
