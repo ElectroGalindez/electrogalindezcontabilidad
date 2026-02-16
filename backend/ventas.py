@@ -5,6 +5,7 @@ from sqlalchemy import text
 from backend.db import engine
 from .productos import  get_product, update_product, increment_stock
 from .logs import registrar_log
+import copy
 import json
 
 # ------------------------------

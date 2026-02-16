@@ -3,15 +3,19 @@ import pandas as pd
 from io import BytesIO
 from backend import clientes, productos, deudas
 
-
+# ===============================
+# SESSION STATE INICIALIZACIÓN
+# ===============================
 if "usuario" not in st.session_state or st.session_state.usuario is None:
     st.warning("Debes iniciar sesión para acceder a esta página.")
     st.stop()
 
+if "pdf_comprobantes_lista" not in st.session_state:
+    st.session_state["pdf_comprobantes_lista"] = []  # Lista de dicts: {"nombre": ..., "data": ...}
 
-# ==========================================================
-# CACHÉ — OPTIMIZACIÓN CRÍTICA
-# ==========================================================
+# ===============================
+# CACHÉ PARA RENDIMIENTO
+# ===============================
 @st.cache_data(ttl=30)
 def load_clientes_con_deuda():
     return deudas.list_clientes_con_deuda() or []
@@ -26,7 +30,6 @@ def load_deudas_cliente(cid: int):
 
 @st.cache_data(ttl=20)
 def load_detalle_deudas():
-    # Recomendación: en backend filtrar solo pendientes para acelerar aún más
     return deudas.list_detalle_deudas() or []
 
 @st.cache_data(ttl=30)
@@ -34,65 +37,48 @@ def load_clientes_dict():
     lista = clientes.list_clients() or []
     return {c["id"]: c["nombre"] for c in lista}
 
-
-
-# ==========================================================
-# CONFIGURACIÓN DE PÁGINA
-# ==========================================================
+# ===============================
+# CONFIGURACIÓN PÁGINA
+# ===============================
 st.set_page_config(page_title="💳 Gestión de Deudas", layout="wide")
 st.title("💳 Gestión de Deudas")
 
-
-
-# ==========================================================
-# CARGAR DATOS
-# ==========================================================
+# ===============================
+# CARGA DE DATOS
+# ===============================
 clientes_con_deuda = load_clientes_con_deuda()
 productos_map = load_productos_map()
 clientes_dict = load_clientes_dict()
-
 clientes_opciones = {c["nombre"]: c["id"] for c in clientes_con_deuda}
 lista_nombres = [""] + list(clientes_opciones.keys())
 
-
-
-# ==========================================================
+# ===============================
 # SELECTOR DE CLIENTE
-# ==========================================================
-st.subheader("👤 Seleccionar Cliente")
-cliente_sel = st.selectbox(
-    "Buscar cliente por nombre",
-    lista_nombres,
-    index=0,
-    key="cliente_selector",
-)
+# ===============================
+st.subheader("👤 Selecciona un cliente con deuda")
+seleccion_cliente = st.selectbox("Clientes con deuda:", lista_nombres)
 
-cliente_id = clientes_opciones.get(cliente_sel)
-
-
-# ==========================================================
-# 📋 BLOQUE DE DEUDAS PENDIENTES DEL CLIENTE
-# ==========================================================
-if cliente_sel and cliente_id:
-
+if seleccion_cliente:
+    cliente_id = clientes_opciones[seleccion_cliente]
     cliente_obj = clientes.get_client(cliente_id)
     deuda_total = float(cliente_obj.get("deuda_total", 0) or 0)
 
     st.markdown(
-        f"<h4>💰 Deuda total de {cliente_sel}: "
+        f"<h4>💰 Deuda total de {seleccion_cliente}: "
         f"<span style='color:#c0392b;'>${deuda_total:,.2f}</span></h4>",
         unsafe_allow_html=True
     )
 
-    # Cargar deudas del cliente
+    # ===============================
+    # CARGAR DEUDAS PENDIENTES DEL CLIENTE
+    # ===============================
     deudas_cliente = load_deudas_cliente(cliente_id)
-
     filas_pendientes = []
+
     for deuda in deudas_cliente:
         for det in deuda.get("detalles", []):
             if (det.get("estado") or "").lower() != "pendiente":
                 continue
-
             cantidad = float(det.get("cantidad") or 0)
             precio_unitario = float(det.get("precio_unitario") or 0)
             monto_pendiente = cantidad * precio_unitario
@@ -111,11 +97,9 @@ if cliente_sel and cliente_id:
     df_pendientes = pd.DataFrame(filas_pendientes)
 
     st.subheader("📋 Deudas Pendientes del Cliente")
-
     if df_pendientes.empty:
         st.info("✔ Este cliente no tiene deudas pendientes.")
     else:
-        # Mostrar tabla de deudas
         st.dataframe(
             df_pendientes[["Producto","Cantidad", "Precio Unitario", "Monto Pendiente", "Fecha"]]
             .sort_values("Fecha", ascending=False)
@@ -128,19 +112,15 @@ if cliente_sel and cliente_id:
             height=200
         )
 
-        # -----------------------------
-        # Selector de deuda a pagar
-        # -----------------------------
+        # ===============================
+        # SELECTOR DE DEUDA A PAGAR
+        # ===============================
         opciones_deuda = {
             f"{row['Producto']} - {row['Fecha']} (${row['Monto Pendiente']:,.2f})": row
             for _, row in df_pendientes.iterrows()
         }
-
-        seleccion_detalle = st.selectbox(
-            "Selecciona la deuda a rebajar",
-            [""] + list(opciones_deuda.keys()),
-            index=0
-        )
+        lista_opciones = list(opciones_deuda.keys())
+        seleccion_detalle = st.selectbox("Selecciona una deuda pendiente:", [""] + lista_opciones)
 
         if seleccion_detalle:
             detalle = opciones_deuda[seleccion_detalle]
@@ -149,25 +129,22 @@ if cliente_sel and cliente_id:
 
             st.markdown(f"### 💵 Monto pendiente de la deuda: **${monto_actual:,.2f}**")
 
-            # -----------------------------
-            # Input monto a pagar
-            # -----------------------------
+            key_num_input = f"monto_pago_{cliente_id}_{detalle_id}"
+            key_btn = f"btn_pagar_{cliente_id}_{detalle_id}"
+
             monto_pago = st.number_input(
                 "Monto a pagar",
                 min_value=0.01,
                 max_value=monto_actual,
                 value=monto_actual,
                 step=0.01,
-                key=f"monto_pago_{detalle_id}"
+                key=key_num_input
             )
 
-            # -----------------------------
-            # Botón registrar pago + generar PDF
-            # -----------------------------
-            if st.button(f"Registrar pago y generar factura (${monto_pago:,.2f})", key=f"btn_pagar_{detalle_id}"):
+            if st.button(f"💳 Registrar pago (${monto_pago:,.2f})", key=key_btn):
                 try:
-                    # Registrar pago
-                    resultado = deudas.pay_debt_producto(
+                    # 🔹 Registrar pago
+                    deudas.pay_debt_producto(
                         deuda_id=detalle["deuda_id"],
                         producto_id=detalle["Producto ID"],
                         monto_pago=monto_pago,
@@ -175,45 +152,100 @@ if cliente_sel and cliente_id:
                     )
                     st.success(f"💰 Pago de ${monto_pago:,.2f} registrado correctamente.")
 
-                    # -----------------------------
-                    # Generar PDF doble
-                    # -----------------------------
-                    from backend.deudas import generar_factura_pago_deuda
-
+                    # 🔹 Generar PDF inmediatamente para este detalle
                     detalle_factura = [{
                         "nombre": detalle["Producto"],
-                        "cantidad": round(monto_pago / detalle.get("Precio Unitario", 1), 2),
-                        "precio_unitario": detalle.get("Precio Unitario", 1)
+                        "cantidad": float(detalle.get("Cantidad", 0)),
+                        "precio_unitario": float(detalle.get("Precio Unitario", 0))
                     }]
 
+                    from backend.deudas import generar_factura_pago_deuda
                     pdf_bytes = generar_factura_pago_deuda(cliente_obj, detalle_factura)
 
-                    st.download_button(
-                        label="⬇️ Descargar Comprobante de Pago",
-                        data=pdf_bytes,
-                        file_name=f"ComprobantePago_{detalle['deuda_id']}_{detalle['producto_id']}.pdf",
-                        mime="application/pdf"
-                    )
+                    if pdf_bytes and isinstance(pdf_bytes, (bytes, bytearray)):
+                        nombre_pdf = f"ComprobantePago_{detalle['deuda_id']}_{detalle_id}.pdf"
+                        st.session_state["pdf_comprobantes_lista"].append({
+                            "nombre": nombre_pdf,
+                            "data": pdf_bytes
+                        })
+                        st.success(f"📄 Comprobante generado: {nombre_pdf}")
 
-                    # Limpiar cache y recargar
-                    st.cache_data.clear()
+                    # Limpiar caches
+                    load_deudas_cliente.clear()
+                    load_detalle_deudas.clear()
+                    load_clientes_con_deuda.clear()
+
+                    # 🔄 Forzar rerun para que se muestre botón inmediatamente
                     st.rerun()
 
                 except Exception as e:
                     st.error(f"❌ Error al registrar el pago: {str(e)}")
 
-# ==========================================================
-# TABLA GENERAL DE TODAS LAS DEUDAS PENDIENTES
-# ==========================================================
-st.subheader("📊 Todas las Deudas Pendientes")
+## =========================================
+# 📥 Selector de Comprobantes Generados
+# =========================================
+st.subheader("📥 Comprobantes Generados")
 
+# Inicializar lista si no existe
+if "pdf_comprobantes_lista" not in st.session_state:
+    st.session_state["pdf_comprobantes_lista"] = []
+
+# 🔹 Generar comprobante doble y agregarlo a la lista
+if "detalle_factura" in st.session_state and "cliente_obj" in st.session_state:
+    detalle = st.session_state.get("detalle_actual")  # Deuda actual seleccionada
+    cliente_obj = st.session_state.get("cliente_obj")
+    detalle_factura = st.session_state.get("detalle_factura")
+
+    if detalle and cliente_obj and detalle_factura:
+        pdf_bytes = generar_factura_pago_deuda(
+            cliente=cliente_obj,
+            productos_pagados=detalle_factura,
+            deuda_id=detalle["deuda_id"],
+            fecha_pago="15/02/2026",
+            usuario=st.session_state.get("usuario","desconocido"),
+            metodo_pago="Efectivo",
+            observaciones="Pago completo de la deuda"
+        )
+
+        # Guardar en session_state
+        st.session_state["pdf_comprobantes_lista"].append({
+            "nombre": f"Comprobante_{detalle['deuda_id']}.pdf",
+            "data": pdf_bytes
+        })
+
+# Mostrar lista de comprobantes
+if st.session_state["pdf_comprobantes_lista"]:
+    # Invertir la lista para que la última factura aparezca primero
+    pdfs_invertidos = list(reversed(st.session_state["pdf_comprobantes_lista"]))
+
+    # Crear diccionario para selectbox
+    opciones = {pdf["nombre"]: idx for idx, pdf in enumerate(pdfs_invertidos)}
+    seleccion = st.selectbox("Selecciona un comprobante para descargar:", [""] + list(opciones.keys()))
+    
+    if seleccion:
+        idx_pdf = opciones[seleccion]
+        pdf = pdfs_invertidos[idx_pdf]
+        
+        st.download_button(
+            label=f"📄 Descargar {pdf['nombre']}",
+            data=pdf["data"],
+            file_name=pdf["nombre"],
+            mime="application/pdf",
+            key=f"download_pdf_{idx_pdf}"
+        )
+else:
+    st.info("✔ Aún no se han generado comprobantes de pago.")
+
+# ===============================
+# TABLA GENERAL DE TODAS LAS DEUDAS PENDIENTES
+# ===============================
+st.subheader("📊 Todas las Deudas Pendientes")
 detalles_totales = load_detalle_deudas()
 filas = []
 
 for d in detalles_totales:
     if str(d.get("estado", "pendiente")).lower() != "pendiente":
         continue
-
     cantidad = float(d.get("cantidad") or 0)
     precio_unitario = float(d.get("precio_unitario") or 0)
     monto_total = cantidad * precio_unitario
@@ -244,10 +276,10 @@ else:
         height=400
     )
 
+    # Exportar Excel
     buffer = BytesIO()
     with pd.ExcelWriter(buffer, engine="xlsxwriter") as writer:
         df_general.to_excel(writer, index=False, sheet_name="DeudasPendientes")
-
     st.download_button(
         "⬇️ Descargar Excel General",
         buffer.getvalue(),
