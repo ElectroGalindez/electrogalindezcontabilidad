@@ -68,7 +68,7 @@ try:
         return df
 
     def style_df(df):
-        return df.style.applymap(lambda x: "background-color:#ffcccc" if isinstance(x,int) and x <=5 else "", subset=["Cantidad"]) \
+        return df.style.map(lambda x: "background-color:#ffcccc" if isinstance(x,int) and x <=5 else "", subset=["Cantidad"]) \
                     .set_properties(**{"text-align": "right"})
 
     # ---------------------------
