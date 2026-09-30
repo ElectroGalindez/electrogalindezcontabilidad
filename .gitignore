@@ -17,3 +17,11 @@ data/
 
 # macOS
 .DS_Store
+
+# PyInstaller
+build/
+dist/
+*.spec
+
+# pytest
+.pytest_cache/
