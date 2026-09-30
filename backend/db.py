@@ -31,6 +31,71 @@ if not DATABASE_URL:
     )
 
 # ---------------------------
+# Normalizar y validar la URL
+# ---------------------------
+import re
+from sqlalchemy.engine import make_url
+
+
+def _normalizar_url(url):
+    """Limpia variantes de pegado: espacios, comillas, prefijo psql, esquema postgres://."""
+    url = url.strip()
+    # "postgresql://..." pegado con comillas dentro del valor
+    if len(url) > 1 and url[0] == url[-1] and url[0] in "\"'":
+        url = url[1:-1].strip()
+    # Comandos pegados: psql 'postgresql://...' o PGPASSWORD=... psql postgresql://...
+    url = re.sub(r"^psql\s+", "", url)
+    url = re.sub(r"^.*?(postgresql(?:s)?(?:\+[a-z0-9]+)?://)", r"\1", url)
+    # Comillas que envolvian al comando completo
+    url = url.strip().strip("'\"")
+    # Esquemas alternativos
+    if url.startswith("postgres://"):
+        url = "postgresql://" + url[len("postgres://"):]
+    if url.startswith("postgresql://"):
+        url = "postgresql+psycopg2://" + url[len("postgresql://"):]
+    return url
+
+
+def _diagnostico(url):
+    """Describe la estructura del secreto SIN revelar usuario ni contraseña."""
+    partes = []
+    if not re.match(r"^postgresql(\+[a-z0-9]+)?://", url):
+        partes.append("no empieza por postgresql://")
+    if "@" not in url:
+        partes.append("falta el '@' entre contraseña y host")
+    else:
+        credenciales = url.split("://", 1)[-1].split("@", 1)[0]
+        if ":" not in credenciales:
+            partes.append("falta ':' entre usuario y contraseña")
+        elif not credenciales.split(":", 1)[1]:
+            partes.append("la contraseña está vacía")
+    if url.count("@") > 1:
+        partes.append("hay varios '@' (cifra la contraseña con %40)")
+    if any(c.isspace() for c in url):
+        partes.append("tiene espacios o saltos de línea")
+    if "'" in url or '"' in url:
+        partes.append("tiene comillas dentro del valor")
+    if "#" in url:
+        partes.append("tiene '#', que en TOML inicia comentario (cifra con %23)")
+    if not partes:
+        partes.append("el formato parece correcto; revisa que el secreto no tenga otro formato")
+    return partes
+
+
+if DATABASE_URL:
+    DATABASE_URL = _normalizar_url(DATABASE_URL)
+    try:
+        make_url(DATABASE_URL)
+    except Exception:
+        raise ValueError(
+            "NEON_DATABASE_URL está presente pero no es una URL válida.\n"
+            "Problemas detectados: " + "; ".join(_diagnostico(DATABASE_URL)) + "\n"
+            "Valor esperado: postgresql://USUARIO:CONTRASENA@HOST/neondb?sslmode=require\n"
+            "En Streamlit Cloud va en Settings -> Secrets, así:\n"
+            '  NEON_DATABASE_URL = "postgresql://USUARIO:CONTRASENA@HOST/neondb?sslmode=require"'
+        )
+
+# ---------------------------
 # Motor y sesión
 # ---------------------------
 engine = create_engine(DATABASE_URL, echo=False, future=True)
