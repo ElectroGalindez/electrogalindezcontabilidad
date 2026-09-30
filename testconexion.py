@@ -1,10 +1,19 @@
-import psycopg2
-from psycopg2 import OperationalError, sql
+import os
 
-# URL de conexión a Neon PostgreSQL
-NEON_DATABASE_URL = "postgresql://neondb_owner:npg_BY8QzbZ1Vsmu@ep-calm-mouse-adgcgbq7-pooler.c-2.us-east-1.aws.neon.tech/neondb?sslmode=require"
+import psycopg2
+from psycopg2 import OperationalError
+from dotenv import load_dotenv
+
+load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env"))
+
+NEON_DATABASE_URL = os.getenv("NEON_DATABASE_URL")
+if NEON_DATABASE_URL:
+    NEON_DATABASE_URL = NEON_DATABASE_URL.replace("postgresql+psycopg2://", "postgresql://")
 
 def test_connection():
+    if not NEON_DATABASE_URL:
+        print("❌ No se encontro NEON_DATABASE_URL en el archivo .env")
+        return
     try:
         # Conectar a la base de datos
         conn = psycopg2.connect(NEON_DATABASE_URL)
