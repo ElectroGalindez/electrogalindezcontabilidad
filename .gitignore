@@ -6,10 +6,10 @@ __pycache__/
 *.sqlite3
 
 # Entorno
-.env
 venv/
 .env.*
 !.env.example
+!.env
 
 # Streamlit (secrets.toml lleva credenciales)
 .streamlit/secrets.toml
