@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import List, Dict, Any
 from sqlalchemy import text
 import json
-from .db import engine, ensure_datetime  # Conexión SQLAlchemy portable
+from .db import engine  # Función que devuelve conexión SQLAlchemy
 
 # ---------------------------
 # Registrar un log
@@ -41,26 +41,10 @@ def registrar_log(usuario: str, accion: str, detalles):
 # ---------------------------
 # Listar todos los logs
 # ---------------------------
-def listar_logs(limit=None, offset=None) -> List[Dict[str, Any]]:
-    sql = "SELECT * FROM logs ORDER BY fecha DESC"
-    params = {}
-    if limit is not None:
-        sql += " LIMIT :limit"
-        params["limit"] = limit
-    if offset is not None:
-        sql += " OFFSET :offset"
-        params["offset"] = offset
+def listar_logs() -> List[Dict[str, Any]]:
     with engine.connect() as conn:
-        result = conn.execute(text(sql), params)
-        rows = [dict(row) for row in result.mappings().all()]
-    for row in rows:
-        row["fecha"] = ensure_datetime(row.get("fecha"))
-    return rows
-
-
-def contar_logs() -> int:
-    with engine.connect() as conn:
-        return conn.execute(text("SELECT COUNT(*) FROM logs")).scalar()
+        result = conn.execute(text("SELECT * FROM logs ORDER BY fecha DESC"))
+        return [dict(row) for row in result.fetchall()]
 
 
 def obtener_logs_usuario(username: str):
@@ -74,7 +58,4 @@ def obtener_logs_usuario(username: str):
     """)
     with engine.connect() as conn:
         result = conn.execute(query, {"usuario": username})
-        rows = [dict(row) for row in result.mappings().all()]
-    for row in rows:
-        row["fecha"] = ensure_datetime(row.get("fecha"))
-    return rows
+        return [row._asdict() for row in result]

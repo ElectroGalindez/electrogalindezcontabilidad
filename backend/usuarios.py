@@ -2,7 +2,7 @@
 from datetime import datetime, timedelta
 import bcrypt
 from sqlalchemy import text
-from backend.db import engine, ensure_datetime
+from backend.db import engine
 from .logs import registrar_log
 
 # ============================================
@@ -23,42 +23,6 @@ def crear_usuario(username, password, rol="empleado", actor=None):
         return {"username": username, "rol": rol}
     except Exception as e:
         raise ValueError(f"Error al crear usuario ({username}): {e}")
-
-# --------------------------------------------
-def asegurar_admin(username="admin", password="admin1234", reset=False):
-    """Garantiza un usuario admin para poder entrar al sistema.
-
-    - Si no existe, lo crea con rol admin y la contraseña indicada.
-    - Si existe y `reset=True`, restablece contraseña, rol y estado.
-    Devuelve la acción realizada: 'creado', 'reseteado' o 'sin_cambios'.
-    """
-    hashed = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
-    accion = "sin_cambios"
-    with engine.begin() as conn:
-        existe = conn.execute(
-            text("SELECT id FROM usuarios WHERE username=:u"), {"u": username}
-        ).first()
-        if not existe:
-            conn.execute(text("""
-                INSERT INTO usuarios (username, password, rol, activo, requiere_cambio_password)
-                VALUES (:u, :p, 'admin', :activo, :req)
-            """), {"u": username, "p": hashed, "activo": True, "req": False})
-            accion = "creado"
-        elif reset:
-            conn.execute(text("""
-                UPDATE usuarios
-                SET password=:p, rol='admin', activo=:activo,
-                    intentos_fallidos=0, bloqueado_hasta=NULL,
-                    requiere_cambio_password=:req
-                WHERE username=:u
-            """), {"u": username, "p": hashed, "activo": True, "req": False})
-            accion = "reseteado"
-
-    if accion != "sin_cambios":
-        registrar_log(usuario="sistema", accion="asegurar_admin",
-                      detalles={"username": username, "resultado": accion})
-    return accion
-
 
 # --------------------------------------------
 def autenticar_usuario(username, password, max_intentos=5, bloqueo_min=15):
@@ -85,10 +49,8 @@ def autenticar_usuario(username, password, max_intentos=5, bloqueo_min=15):
             return None  # Usuario no existe o está desactivado
 
         # Si está bloqueado
-        if row["bloqueado_hasta"]:
-            bloqueado_hasta = ensure_datetime(row["bloqueado_hasta"])
-            if bloqueado_hasta > now:
-                return {"bloqueado": True, "bloqueado_hasta": bloqueado_hasta.isoformat()}
+        if row["bloqueado_hasta"] and row["bloqueado_hasta"] > now:
+            return {"bloqueado": True, "bloqueado_hasta": row["bloqueado_hasta"].isoformat()}
 
         # Contraseña correcta
         if bcrypt.checkpw(password.encode(), row["password"].encode()):
@@ -153,7 +115,7 @@ def listar_usuarios():
             "username": r["username"],
             "rol": r["rol"],
             "activo": r["activo"],
-            "created_at": ensure_datetime(r["created_at"]).isoformat() if r["created_at"] else None,
+            "created_at": r["created_at"].isoformat() if r["created_at"] else None,
             "requiere_cambio_password": r["requiere_cambio_password"]
         }
         for r in rows
